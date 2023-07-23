@@ -11,8 +11,8 @@ import (
 
 const (
 	LIB_VER = "8"										// current librarian version
-	SW_DATE = "2023-06-18"								// current sw date (for pre, pro, spi, eeprom file names)
-	SW_V8 = "d0fafad2"									// sw ver 2023-06-18
+	SW_DATE = "2023-06-20"								// current sw date (for pre, pro, spi, eeprom file names)
+	SW_V8 = "7bbb846b"									// sw ver 2023-06-20
 	SW_V7 = "73c6c3d7"									// sw ver 2023-05-24
 	SW_V6 = "27c263bf"									// sw ver 2023-01-31
 	SW_V5 = "2d58f653"									// sw ver 2023-01-01

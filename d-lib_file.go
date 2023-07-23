@@ -10,14 +10,13 @@ import (
 	"path/filepath"
 	"errors"
 	"strings"
-	"fmt"
 )
 
-func dir_exists_chk(dir string) (bool) {
-	dir = filepath.Clean(dir)
-    _, err := os.Stat(dir)
-    if os.IsNotExist(err) { return false }
-    return true
+// check if dir or file exists
+func path_exists_chk(path string) (bool) {
+	path = filepath.Clean(path)
+    _, err := os.Stat(path)
+	return !errors.Is(err, os.ErrNotExist)
 }
 
 // create directory for file if directory does not exist.
@@ -51,18 +50,14 @@ func file_ext_chk(file string, ext string) (string) {
 func file_read_chk(file, ext string) (string) {
 	file_blank_chk(file)
 	file = file_ext_chk(file, ext)
-    _, err := os.Stat(file)
-    if errors.Is(err, os.ErrNotExist) {
-		log.Fatal("> File ", file, " does not exist!") 
-	}
+    if !path_exists_chk(file) { log.Fatal("> File ", file, " does not exist!") }
 	return file
 }
 
 // check if <file> exists, prompt to overwrite
 func file_write_chk(file string, yes bool) (bool) {
 	file_blank_chk(file)
-    _, err := os.Stat(file)
-    if !errors.Is(err, os.ErrNotExist) {
+    if path_exists_chk(file) {
 		return user_prompt("Overwrite file " + file + "?", yes)
 	}
 	return true
@@ -125,36 +120,31 @@ func map_files(dir string, ext string) (map[string]string) {
 // set key value in config file
 // create file if it doesn't exist
 func cfg_set(key, value string) {
-    _, err := os.Stat(CFG_FILE)
-    if errors.Is(err, os.ErrNotExist) {  // missing
-		fmt.Println("> Created:", CFG_FILE, "- it was missing!")
-		file_write_str(CFG_FILE, "", true)
+	if !path_exists_chk(CFG_FILE) {	 // create file
+		file_write_str(CFG_FILE, "", true) 
 	}
+	key = strings.TrimSpace(key)
+	value = strings.TrimSpace(value)
 	file_str := file_read_str(CFG_FILE)
 	lines := strings.Split(file_str, "\n")
 	str := ""
 	found := false
 	for _, line := range lines {
 		fields := strings.Fields(line)
-		if len(fields) == 2 {
-			if fields[0] == key {
-				str += key + " " + value + "\n"
-				found = true
-				break
-			} else { str += line + "\n"	}
-		}
+		if len(fields) == 2 && fields[0] == key {
+			str += key + " " + value + "\n"
+			found = true
+		} else { str += line + "\n"	}
 	}
 	if !found { str += key + " " + value + "\n" }
 	file_write_str(CFG_FILE, str, true)
 }
 
-// get key value from config file
-// create file if it doesn't exist
+// get first matching key value from config file
+// return "" if file doesn't exist or no key match
 func cfg_get(key string) (string) {
-    _, err := os.Stat(CFG_FILE)
-    if errors.Is(err, os.ErrNotExist) {  // missing
-		cfg_set(key, "")
-	}
+	if !path_exists_chk(CFG_FILE) { return "" }
+	key = strings.TrimSpace(key)
 	file_str := file_read_str(CFG_FILE)
 	lines := strings.Split(file_str, "\n")
 	for _, line := range lines {

@@ -6,7 +6,7 @@ Where: d-* = d-win (Windows); d-mac (Mac Intel); d-mm1 (Mac M1);
              d-lin (Linux Intel); d-arm (Linux ARM64); d-a32 (Linux ARM32)
 
 Commands & Flags:
-  update                                               interactive menu to do update
+  update                                               interactive update menu
   <command> -h                                         help with individual command flags
   help <-v>                                            librarian help with optional examples
   ports <-p port>                                      list ports / set port

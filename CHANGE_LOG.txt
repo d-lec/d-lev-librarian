@@ -14,6 +14,16 @@
 ////////////////
 // CHANGE LOG //
 ////////////////
+2023-06-21 : v8
+- Config file handling more robust.
+- Lots of path/file/ext edits.
+- dir_exists_chk() => path_exists_chk() with GO preferred syntax.
+
+2023-06-20 : v8
+- New SW load: 0x7bbb846b
+- Less cryptic serial port open error message (was: "no such file or directory").
+- Made the update _ALL_ directory non-relative.
+
 2023-06-18 : v8
 - Command update: 
   - Now the default at startup.

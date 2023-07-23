@@ -22,6 +22,9 @@ func sp_list() ([]string) {
 // open enumerated serial port
 func sp_open() (serial.Port) {
 	port := cfg_get("port")
+	if port == "" {
+		log.Fatal("Current port is not assigned!") 
+	}
 	// config as 230400bps N81
 	mode := &serial.Mode{
 		BaudRate: 230400,
@@ -30,7 +33,7 @@ func sp_open() (serial.Port) {
 		StopBits: serial.OneStopBit,
 	}
 	// open port
-	sp, err := serial.Open(port, mode); if err != nil { log.Fatal(err) }
+	sp, err := serial.Open(port, mode); if err != nil { log.Fatal("Error opening port: ", port, " !") }
 	return sp
 }
 

@@ -693,11 +693,11 @@ func process_dlps(dir, dir2 string, pro, mono, update, robs, yes bool) {
 	dir = filepath.Clean(dir)
 	dir2 = filepath.Clean(dir2)
 	// prompt user
-	if !dir_exists_chk(dir) {
+	if !path_exists_chk(dir) {
 		log.Fatalln("> Directory", dir, "does not exist!") 
 	} else if dir == dir2 { 
 		if !user_prompt("Overwrite DLP files in SOURCE directory " + dir + "?", yes) { return }
-	} else if dir_exists_chk(dir2) { 
+	} else if path_exists_chk(dir2) { 
 		if !user_prompt("Overwrite DLP files in DESTINATION directory " + dir2 + "?", yes)  { return }
 	}
 	files, err := os.ReadDir(dir); if err != nil { log.Fatal(err) }

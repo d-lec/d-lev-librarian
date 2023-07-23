@@ -58,7 +58,7 @@ func help_cmd(verbose_f bool) {
 func reset_cmd() {
 	sp := sp_open()
 	sp_wr_rd(sp, "0 0xff000000 wr ", false)
-	fmt.Println(" Issued processor reset")
+	fmt.Println("> Issued processor reset")
 	sp.Close()
 }
 
@@ -154,6 +154,8 @@ func ports_cmd(port_new string) {
 		}
 	} else if len(os.Args) > 2 { 
 		log.Fatalln("> Use the -p flag to set the port!")
+	} else if port == "" {
+		fmt.Println("> Current port is not assigned!")
 	} else if port_idx < 0 {
 		fmt.Println("> Current port:", port, "doesn't exist!")
 	} else {
@@ -268,9 +270,9 @@ func diff_cmd(file, file2 string, pro, knobs bool, slot, slot2 string) {
 
 // match slots / DLP files w/ DLP files & list
 func match_cmd(dir, dir2 string, pro, hdr, guess, slots bool) {
+	name_strs, data_strs := get_dir_strs(dir, ".dlp")
 	mode := "pre"
 	if pro { mode = "pro" }
-	name_strs, data_strs := get_dir_strs(dir, ".dlp")
 	if len(data_strs) == 0 {  log.Fatalln("> No", mode, "files in", dir) }
 	if slots {
 		slots_strs := get_slots_strs()
@@ -289,7 +291,7 @@ func dump_cmd(file string, yes bool) {
 	ext := filepath.Ext(file)
 	switch ext {
 		case ".pre", ".pro", ".spi", ".eeprom" : // these are OK
-		default : log.Fatalln("> Unknown file extension", ext)
+		default : log.Fatalln("> Unknown file extension:", ext)
 	}
 	addr, end := spi_bulk_addrs(ext)
 	sp := sp_open()
@@ -302,10 +304,10 @@ func dump_cmd(file string, yes bool) {
 
 // knobs => *.dlp
 func ktof_cmd(file string, pro, yes bool) {
-	mode := "pre"
-	if pro { mode = "pro" }
 	file_blank_chk(file)
 	file = file_ext_chk(file, ".dlp")
+	mode := "pre"
+	if pro { mode = "pro" }
 	pints := get_knob_pints(mode)
 	if file_write_str(file, ints_to_hexs(pints, 4), yes) {
 		fmt.Println("> downloaded", mode, "knobs to", mode, "file", file) 
@@ -315,10 +317,10 @@ func ktof_cmd(file string, pro, yes bool) {
 // slot => *.dlp
 func stof_cmd(slot, file string, pro, yes bool) {
 	slot_int, err := strconv.Atoi(slot); if err != nil { log.Fatalln("> Bad slot number!") }
-	mode := "pre"
-	if pro { mode = "pro" }
 	file_blank_chk(file)
 	file = file_ext_chk(file, ".dlp")
+	mode := "pre"
+	if pro { mode = "pro" }
 	if file_write_str(file, get_slot_str(slot_int, mode), yes) {
 		fmt.Println("> downloaded", mode, "slot", slot_int, "to", mode, "file", file) 
 	}
@@ -327,13 +329,13 @@ func stof_cmd(slot, file string, pro, yes bool) {
 // pump from file
 func pump_cmd(file string) {
 	ext := filepath.Ext(file)
+	file = file_read_chk(file, ext)
 	switch ext {
 		case ".pre", ".pro", ".spi", ".eeprom" : // these are OK
-		default : log.Fatalln("> Unknown file extension", ext)
+		default : log.Fatalln("> Unknown file extension:", ext)
 	}
-	addr, _ := spi_bulk_addrs(ext)
-	file = file_read_chk(file, ext)
 	file_str := file_read_str(file)
+	addr, _ := spi_bulk_addrs(ext)
 	sp := sp_open()
 	spi_wr(sp, addr, file_str, true)
 	sp.Close()
@@ -343,12 +345,12 @@ func pump_cmd(file string) {
 
 // *.dlp => knobs
 func ftok_cmd(file string, pro bool) {
-	mode := "pre"
-	if pro { mode = "pro" }
 	file = file_read_chk(file, ".dlp")
 	file_str := file_read_str(file)
 	pints := hexs_to_ints(file_str, 4)
 	if len(pints) < SLOT_BYTES { log.Fatalln("> Bad file info!") }
+	mode := "pre"
+	if pro { mode = "pro" }
 	put_knob_pints(pints, mode)
 	fmt.Println("> uploaded", mode, "file", file, "to", mode, "knobs") 
 }
@@ -356,10 +358,10 @@ func ftok_cmd(file string, pro bool) {
 // *.dlp => slot
 func ftos_cmd(slot, file string, pro bool) {
 	slot_int, err := strconv.Atoi(slot); if err != nil { log.Fatalln("> Bad slot number!") }
-	mode := "pre"
-	if pro { mode = "pro" }
 	file = file_read_chk(file, ".dlp")
 	file_str := file_read_str(file)
+	mode := "pre"
+	if pro { mode = "pro" }
 	addr := spi_slot_addr(slot_int, mode)
 	sp := sp_open()
 	spi_wr(sp, addr, file_str, false)
@@ -370,13 +372,13 @@ func ftos_cmd(slot, file string, pro bool) {
 // *.bnk => *.dlps => slots
 func btos_cmd(slot, file string, pro bool) {
 	slot_int, err := strconv.Atoi(slot); if err != nil { log.Fatalln("> Bad slot number!") }
-	mode := "pre"
-	if pro { mode = "pro" }
-	dir, _ := filepath.Split(file)
-	dir = filepath.Clean(dir)
 	file = file_read_chk(file, ".bnk")
 	bnk_str := file_read_str(file)
 	bnk_split := strings.Split(bnk_str, "\n")
+	dir, _ := filepath.Split(file)
+	dir = filepath.Clean(dir)
+	mode := "pre"
+	if pro { mode = "pro" }
 	sp := sp_open()
 	for _, line := range bnk_split {
 		line_str := strings.TrimSpace(string(line));
@@ -385,7 +387,7 @@ func btos_cmd(slot, file string, pro bool) {
 			dlp_file := file_read_chk(filepath.Join(dir, line_str), ".dlp")
 			dlp_str := file_read_str(dlp_file)
 			spi_wr(sp, addr, dlp_str, false)
-			fmt.Println("> uploaded", mode, "file", dlp_file, "to", mode, "slot", slot_int)
+			fmt.Println("> uploaded", mode, "file", line_str, "to", mode, "slot", slot_int)
 			slot_int++
 		}
 	}
@@ -394,94 +396,92 @@ func btos_cmd(slot, file string, pro bool) {
 
 // split file containers into sub containers
 func split_cmd(file string, yes bool) {
-	dir, file_name := filepath.Split(file)
+	ext := filepath.Ext(file)
+	file_read_chk(file, ext)
+	dir, base := filepath.Split(file)
 	dir = filepath.Clean(dir)
-	ext := filepath.Ext(file_name)
-	switch ext {
-		case ".pre", ".pro", ".eeprom" : // these are OK
-		default : log.Fatalln("> Unknown file extension", ext)
-	}
-	base_name := strings.TrimSuffix(file_name, ext)
-	file = file_read_chk(file, ext)
+	base = strings.TrimSuffix(base, ext)
 	file_str := file_read_str(file)
 	str_split := strings.Split(file_str, "\n")
-	if ext == ".eeprom" {
-		var pre_str string
-		var pro_str string
-		var spi_str string
-		for line, str := range str_split {
-			if line < PRE_SLOTS*SLOT_BYTES/4 { 
-				pre_str += str + "\n"
-			} else if line < SLOTS*SLOT_BYTES/4 { 
-				pro_str += str + "\n"
-			} else { 
-				spi_str += str + "\n"
+	switch ext {
+		case ".eeprom" :
+			pre_str := ""
+			pro_str := ""
+			spi_str := ""
+			for line, str := range str_split {
+				if line < PRE_SLOTS*SLOT_BYTES/4 { 
+					pre_str += str + "\n"
+				} else if line < SLOTS*SLOT_BYTES/4 { 
+					pro_str += str + "\n"
+				} else { 
+					spi_str += str + "\n"
+				}
 			}
-		}
-		pre_file := filepath.Join(dir, base_name + ".pre")
-		pro_file := filepath.Join(dir, base_name + ".pro")
-		spi_file := filepath.Join(dir, base_name + ".spi")
-		file_write_str(pre_file, pre_str, yes)
-		file_write_str(pro_file, pro_str, yes)
-		file_write_str(spi_file, spi_str, yes)
-		fmt.Println("> split", file, "to", pre_file, pro_file, spi_file )
-	} else {  // pre | pro
-		var dlp_str string
-		file_num := 0
-		for line, str := range str_split {
-			dlp_str += str + "\n"
-			if line % 64 == 63 { 
-				dlp_name := fmt.Sprintf("%03d", file_num) + ".dlp"
-				if ext == ".pro" { dlp_name = "pro_" + dlp_name }
-				dlp_file := filepath.Join(dir, dlp_name)
-				file_write_str(dlp_file, dlp_str, yes)
-				file_num++
-				dlp_str = ""
+			pre_file := base + ".pre"
+			pro_file := base + ".pro"
+			spi_file := base + ".spi"
+			pre_path := filepath.Join(dir, pre_file)
+			pro_path := filepath.Join(dir, pro_file)
+			spi_path := filepath.Join(dir, spi_file)
+			file_write_str(pre_path, pre_str, yes)
+			file_write_str(pro_path, pro_str, yes)
+			file_write_str(spi_path, spi_str, yes)
+			fmt.Println("> split", file, "to", pre_file, pro_file, spi_file )
+		case ".pre", ".pro" :
+			var dlp_str string
+			file_num := 0
+			for line, str := range str_split {
+				dlp_str += str + "\n"
+				if line % 64 == 63 { 
+					dlp_name := fmt.Sprintf("%03d", file_num) + ".dlp"
+					if ext == ".pro" { dlp_name = "pro_" + dlp_name }
+					dlp_file := filepath.Join(dir, dlp_name)
+					file_write_str(dlp_file, dlp_str, yes)
+					file_num++
+					dlp_str = ""
+				}
 			}
-		}
-		fmt.Println("> split", file, "to", file_num, "numbered *.dlp files" )
+			fmt.Println("> split", file, "to", file_num, "numbered *.dlp files" )
+		default : log.Fatalln("> Unknown file extension:", ext)
 	}
 }
 
 // join sub containers to container
 func join_cmd(file string, yes bool) {
-	file_blank_chk(file)
-	dir, file_name := filepath.Split(file)
+	ext := filepath.Ext(file)
+	dir, base := filepath.Split(file)
 	dir = filepath.Clean(dir)
-	ext := filepath.Ext(file_name)
+	base = strings.TrimSuffix(base, ext)
 	switch ext {
-		case ".pre", ".pro", ".eeprom" : // these are OK
-		default : log.Fatalln("> Unknown file extension", ext)
-	}
-	base_name := strings.TrimSuffix(file_name, ext)
-	if ext == ".eeprom" {
-		base_path := filepath.Join(dir, base_name)
-		pre_path := file_read_chk(base_path, ".pre")
-		pre_str := file_read_str(pre_path)
-		pro_path := file_read_chk(base_path, ".pro")
-		pro_str := file_read_str(pro_path)
-		spi_path := file_read_chk(base_path, ".spi")
-		spi_str := file_read_str(spi_path)
-		file_str := pre_str + "\n"
-		file_str += pro_str + "\n"
-		file_str += spi_str
-		if file_write_str(file, file_str, yes) {
-			fmt.Println("> merged", pre_path, pro_path, spi_path, "to", file )
-		}
-	} else {  // pre | pro
-		file_str := ""
-		files := PRE_SLOTS
-		if ext == ".pro" { files = PRO_SLOTS }
-		for file_num := 0; file_num < files; file_num++ {
-			dlp_name := fmt.Sprintf("%03d", file_num)
-			if ext == ".pro" { dlp_name = "pro_" + dlp_name }
-			dlp_path := file_read_chk(filepath.Join(dir, dlp_name), ".dlp")
-			dlp_str := file_read_str(dlp_path)
-			file_str += dlp_str + "\n"
-		}
-		if file_write_str(file, file_str, yes) {
-			fmt.Println("> joined", files, "numbered *.dlp files", "to", file)
-		}
+		case ".eeprom" :
+			base_path := filepath.Join(dir, base)
+			pre_path := file_read_chk(base_path, ".pre")
+			pre_str := file_read_str(pre_path)
+			pro_path := file_read_chk(base_path, ".pro")
+			pro_str := file_read_str(pro_path)
+			spi_path := file_read_chk(base_path, ".spi")
+			spi_str := file_read_str(spi_path)
+			file_str := pre_str + "\n"
+			file_str += pro_str + "\n"
+			file_str += spi_str
+			if file_write_str(file, file_str, yes) {
+				fmt.Println("> joined", pre_path, pro_path, spi_path, "to", file )
+			}
+		case ".pre", ".pro" :
+			file_str := ""
+			files := PRE_SLOTS
+			if ext == ".pro" { files = PRO_SLOTS }
+			for file_num := 0; file_num < files; file_num++ {
+				dlp_name := fmt.Sprintf("%03d", file_num)
+				if ext == ".pro" { dlp_name = "pro_" + dlp_name }
+				dlp_path := file_read_chk(filepath.Join(dir, dlp_name), ".dlp")
+				dlp_str := file_read_str(dlp_path)
+				file_str += dlp_str + "\n"
+			}
+			if file_write_str(file, file_str, yes) {
+				fmt.Println("> joined", files, "numbered *.dlp files", "to", file)
+			}
+		default : log.Fatalln("> Unknown file extension:", ext)
 	}
 }
 
@@ -551,18 +551,24 @@ func sw_pre_chk(pre_chk bool) (bool) {
 
 // do a bunch of update stuff via interactive menu
 func update_cmd(dir_work string) {
-	wd, wderr := os.Getwd(); if wderr != nil { log.Fatal(wderr) }
-	ex, exerr := os.Executable(); if exerr != nil { log.Fatal(exerr) }
-	ed := filepath.Dir(ex)
-	rd, rderr := filepath.Rel(wd, ed); if rderr != nil { log.Fatal(rderr) }	
-	dir_all := filepath.Join(rd, PRESETS_DIR)
+	dir_work = filepath.Clean(dir_work)
+	path_exe, err := os.Executable(); if err != nil { log.Fatal(err) }
+	dir_exe := filepath.Dir(path_exe)
+	dir_all := filepath.Join(dir_exe, PRESETS_DIR)
 	//
-	file_spi := filepath.Join(dir_all, SW_DATE + ".spi")
-	file_factory := filepath.Join(dir_all, SW_DATE + ".eeprom")
-	file_bank := filepath.Join(dir_all, SW_DATE + ".bnk")
-	file_bank_new := filepath.Join(dir_all, SW_DATE + "_new.bnk")
-	file_pre_dl := filepath.Join(dir_work, "download.pre")
-	file_pre_ul := filepath.Join(dir_work, "upload.pre")
+	file_spi := filepath.Join(PRESETS_DIR, SW_DATE + ".spi")
+	file_factory := filepath.Join(PRESETS_DIR, SW_DATE + ".eeprom")
+	file_bank := filepath.Join(PRESETS_DIR, SW_DATE + ".bnk")
+	file_bank_new := filepath.Join(PRESETS_DIR, SW_DATE + "_new.bnk")
+	//
+	path_spi := filepath.Join(dir_exe, file_spi)
+	path_factory := filepath.Join(dir_exe, file_factory)
+	path_bank := filepath.Join(dir_exe, file_bank)
+	path_bank_new := filepath.Join(dir_exe, file_bank_new)	
+	//
+	path_pre_dl := filepath.Join(dir_work, "download.pre")
+	path_pre_ul := filepath.Join(dir_work, "upload.pre")
+	//
 	prompt := false
 	for {
 		if prompt {
@@ -579,12 +585,12 @@ func update_cmd(dir_work string) {
 		fmt.Println("  1. Serial port setup & check.")
 		fmt.Println("  2. Backup your system to an EEPROM file.")
 		fmt.Println("  3. Check & update the D-Lev software.")
-		fmt.Println("  4. Download all D-Lev preset slots to the", dir_work, "directory.")
-		fmt.Println("  5. Update all preset files in the", dir_work, "directory.")
-		fmt.Println("  6. Overwrite all D-Lev preset slots with files from the", dir_work, "directory.")
-		fmt.Println("  7. Upload the latest new preset files.")
-		fmt.Println("  8. Convert all preset files in the", dir_work, "directory to MONO.")
-		fmt.Println("  9. Overwrite all D-Lev preset slots with presets from the", dir_all, "directory.")
+		fmt.Println("  4. Download all D-Lev presets to the", dir_work, "directory.")
+		fmt.Println("  5. Update all presets in the", dir_work, "directory.")
+		fmt.Println("  6. Upload all D-Lev presets from the", dir_work, "directory.")
+		fmt.Println("  7. Upload the latest new presets.")
+		fmt.Println("  8. Convert all presets in the", dir_work, "directory to MONO.")
+		fmt.Println("  9. Overwrite all D-Lev preset slots with presets from the", PRESETS_DIR, "directory.")
 		fmt.Println(" 10. Factory Reset: Overwrite EVERYTHING with the latest factory EEPROM file.")
 		menu_sel := user_input("Please select a MENU option")
 		switch {
@@ -623,10 +629,10 @@ func update_cmd(dir_work string) {
 				fmt.Println("> Port seems to be OK!")
 			}
 		case menu_sel == "2" :
-			backup_file := date_hms() + ".eeprom"
-			prompt = user_prompt("Do you want to BACKUP your ENTIRE D-Lev to the FILE: " + backup_file + "?", false)
+			file_backup := date_hms() + ".eeprom"
+			prompt = user_prompt("Do you want to BACKUP your ENTIRE D-Lev to the FILE: " + file_backup + "?", false)
 			if prompt {
-				dump_cmd(backup_file, false)
+				dump_cmd(file_backup, false)
 			}
 		case menu_sel == "3" :
 			fmt.Println()
@@ -635,61 +641,65 @@ func update_cmd(dir_work string) {
 			if (sw_upd)  {
 				prompt = user_prompt("Do you want to UPDATE your D-Lev SOFTWARE with the FILE: "+ file_spi + "?", false)
 				if prompt {
-					pump_cmd(file_spi)
+					pump_cmd(path_spi)
 					fmt.Println()
 					sw_pre_chk(false)
 				}
 			}
 		case menu_sel == "4" :
-			prompt = user_prompt("Do you want to DOWNLOAD ALL D-Lev preset SLOTS to FILES in " + dir_work +"?", false)
+			prompt = user_prompt("Do you want to DOWNLOAD your D-Lev presets to " + dir_work +"?", false)
 			if prompt {
-				dump_cmd(file_pre_dl, true)
-				split_cmd(file_pre_dl, true)
+				dump_cmd(path_pre_dl, true)
+				split_cmd(path_pre_dl, true)
 			}
 		case menu_sel == "5" :
-			prompt = user_prompt("Do you want to UPDATE ALL preset FILES in " + dir_work + "?", false)
+			prompt = user_prompt("Do you want to UPDATE the presets in " + dir_work + "?", false)
 			if prompt {
 				process_dlps(dir_work, dir_work, false, false, true, false, true)
 			}
 		case menu_sel == "6" :
-			prompt = user_prompt("Do you want to OVERWRITE ALL of your D-Lev preset SLOTS with the FILES in "+ dir_work + "?", false)
+			prompt = user_prompt("Do you want to UPLOAD the presets in "+ dir_work + "?", false)
 			if prompt {
-				join_cmd(file_pre_ul, true)
-				pump_cmd(file_pre_ul)
+				join_cmd(path_pre_ul, true)
+				pump_cmd(path_pre_ul)
 			}
 		case menu_sel == "7" :
-			fmt.Println("> Here is a LIST of the latest NEW PRESETS:")
+			fmt.Println("> Here is a LIST of the latest NEW presets:")
 			fmt.Println()
-			file_read_chk(file_bank_new, ".bnk")
-			file_str := file_read_str(file_bank_new)
+			file_read_chk(path_bank_new, ".bnk")
+			file_str := file_read_str(path_bank_new)
 			fmt.Println(file_str)
-			prompt = user_prompt("Do you want to EXAMINE your current D-Lev preset SLOTS?", false)
+			prompt = user_prompt("Do you want to EXAMINE your current D-Lev presets?", false)
 			if prompt { match_cmd(dir_all, "", false, false, true, true) }
-			prompt = user_prompt("Do you want to UPLOAD the latest NEW PRESETS?", false)
+			prompt = user_prompt("Do you want to UPLOAD the latest NEW presets?", false)
 			if prompt {
 				slot := user_input("What SLOT do you want to START the upload?")
 				if slot == "" {
 					prompt = false
 				} else {
-					btos_cmd(slot, file_bank_new, false)
+					btos_cmd(slot, path_bank_new, false)
 				}
-				prompt = user_prompt("Do you want to EXAMINE your D-Lev preset SLOTS?", false)
+				prompt = user_prompt("Do you want to EXAMINE your current D-Lev presets?", false)
 				if prompt { match_cmd(dir_all, "", false, false, true, true) }
 			}
 		case menu_sel == "8" :
-			prompt = user_prompt("Do you want to CONVERT ALL of the preset FILES in " + dir_work + " to MONO?", false) 
+			prompt = user_prompt("Do you want to CONVERT all of the presets in " + dir_work + " to MONO?", false) 
 			if prompt {
 				process_dlps(dir_work, dir_work, false, true, false, false, true)
 			}
 		case menu_sel == "9" :
-			prompt = user_prompt("Do you want to OVERWRITE ALL of your D-Lev preset SLOTS with the FILES in " + dir_all + "?", false)
+			prompt = user_prompt("Do you want to OVERWRITE all D-Lev preset slots with presets in " + PRESETS_DIR + "?", false)
 			if prompt {
-				btos_cmd("0", file_bank, false)
+				btos_cmd("0", path_bank, false)
+				prompt = user_prompt("Do you want to EXAMINE your current D-Lev presets?", false)
+				if prompt { match_cmd(dir_all, "", false, false, true, true) }
 			}
 		case menu_sel == "10" :
-			prompt = user_prompt("Do you want to OVERWRITE ABSOLUTELY EVERYTHING in your D-Lev with the FILE "+ file_factory + "?", false)
+			prompt = user_prompt("Do you want to OVERWRITE ABSOLUTELY EVERYTHING in your D-Lev with the latest EEPROM file?", false)
 			if prompt {
-				pump_cmd(file_factory)
+				pump_cmd(path_factory)
+				fmt.Println()
+				sw_pre_chk(false)
 			}
 		case menu_sel == "" :
 			// do nothing
