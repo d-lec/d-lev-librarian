@@ -19,3 +19,15 @@
 
 # Go workspace file
 go.work
+
+*.swp
+
+# Binaries (include in releases instead)
+d-lin
+d-mac
+d-mm1
+d-win.exe
+d-lib
+d-a32
+d-arm
+d-lib.cfg
