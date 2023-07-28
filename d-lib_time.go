@@ -21,7 +21,7 @@ func hms() (string) {
 	return fmt.Sprintf("%02d-%02d-%02d", now.Hour(), now.Minute(), now.Second())
 }
 
-// return date string as yyyy-mm-dd
+// return date & time string as yyyy-mm-dd_hh_mm_ss
 func date_hms() (string) {
 	now := time.Now()
 	return fmt.Sprintf("%d-%02d-%02d_%02d-%02d-%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())

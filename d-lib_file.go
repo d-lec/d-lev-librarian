@@ -5,61 +5,71 @@ package main
 */
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"errors"
 	"strings"
+	"fmt"
 )
 
+// check for blank <file> name
+func file_blank_chk(file string) {
+	if file == "" { error_exit("Missing file name") }
+}
+
+// check for blank <dir> name
+func dir_blank_chk(dir string) {
+	if dir == "" { error_exit("Missing directory name") }
+}
+
 // check if dir or file exists
-func path_exists_chk(path string) (bool) {
-	path = filepath.Clean(path)
+func path_exists(path string) (bool) {
     _, err := os.Stat(path)
 	return !errors.Is(err, os.ErrNotExist)
 }
 
-// create directory for file if directory does not exist.
+// check if dir exists, quit if not
+func dir_chk(dir string) {
+	dir_blank_chk(dir)
+	if !path_exists(dir) { error_exit(fmt.Sprint("Directory ", dir, " does not exist")) }
+}
+
+// check if <file> exists, quit if not
+func file_chk(file string) {
+	file_blank_chk(file)
+	if !path_exists(file) { error_exit(fmt.Sprint("File ", file, " does not exist")) }
+}
+
+// create directory for file if directory does not exist
 func file_make_dir(file string) {
 	dir, _ := filepath.Split(file)
-	dir = filepath.Clean(dir)
 	if dir == "" { return }
-	err := os.MkdirAll(dir, os.ModePerm)
-	if err != nil {	log.Println(err) }
+	err_chk(os.MkdirAll(dir, os.ModePerm))
 }
 
-// check for blank <file> name
-func file_blank_chk(file string) {
-	if strings.TrimSpace(file) == "" { 
-		log.Fatal("> Missing file name!") 
-	}
-}
-
-// check <file> <ext>, add if missing
+// check <file> <ext>, add if missing, return it
 func file_ext_chk(file string, ext string) (string) {
+	file_blank_chk(file)
     f_ext := filepath.Ext(file)
-    if len(f_ext) == 0 { 
+    if f_ext == "" { 
 		file += ext
-	} else if f_ext != ext { 
-		log.Fatal("> Wrong file extension: ", f_ext, " (expecting: ", ext, " or none)") 
+		return file 
 	}
+	if f_ext != ext { error_exit(fmt.Sprint("Wrong file extension: ", f_ext, " (expecting: ", ext, " or none)")) }
 	return file
 }
 
-// check if <file><ext> exists, check & add extension if needed
-func file_read_chk(file, ext string) (string) {
-	file_blank_chk(file)
-	file = file_ext_chk(file, ext)
-    if !path_exists_chk(file) { log.Fatal("> File ", file, " does not exist!") }
-	return file
+// read trimmed string from file
+func file_read_str(file string) (string) {
+	file_chk(file)
+	file_bytes, err := os.ReadFile(file); err_chk(err)
+	return strings.TrimSpace(string(file_bytes))
 }
 
 // check if <file> exists, prompt to overwrite
 func file_write_chk(file string, yes bool) (bool) {
 	file_blank_chk(file)
-    if path_exists_chk(file) {
-		return user_prompt("Overwrite file " + file + "?", yes)
-	}
+    if path_exists(file) { return user_prompt("Overwrite file " + file + "?", yes, false) }
 	return true
 }
 
@@ -67,25 +77,17 @@ func file_write_chk(file string, yes bool) (bool) {
 func file_write_str(file, data string, yes bool) (bool) {
 	if file_write_chk(file, yes) {
 		file_make_dir(file)
-		err := os.WriteFile(file, []byte(strings.TrimSpace(data)), 0666); 
-		if err != nil { log.Fatal(err) }
+		err_chk(os.WriteFile(file, []byte(strings.TrimSpace(data)), 0666))
 		return true
 	}
 	return false
 }
 
-// read trimmed string from file
-func file_read_str(file string) (string) {
-	file_bytes, err := os.ReadFile(file); if err != nil { log.Fatal(err) }
-	return strings.TrimSpace(string(file_bytes))
-}
-
 // get name and contents of all *<ext> files in <dir>
-func get_dir_strs(dir, ext string) ([]string, []string) {
+func dir_read_strs(dir, ext string) ([]string, []string) {
 	var name_strs []string
 	var data_strs []string
-	dir = filepath.Clean(dir)
-	files, err := os.ReadDir(dir); if err != nil { log.Fatal(err) }
+	files, err := os.ReadDir(dir); err_chk(err)
 	for _, file := range files {
 		if (filepath.Ext(file.Name()) == ext) && (file.IsDir() == false) {
 			file_str := file_read_str(filepath.Join(dir, file.Name()))
@@ -96,22 +98,6 @@ func get_dir_strs(dir, ext string) ([]string, []string) {
     return name_strs, data_strs
 }
 
-// return a file map for a given directory
-// key = file.ext contents (as string)
-// value = file name (sans extension)
-func map_files(dir string, ext string) (map[string]string) {
-	var f_map = make(map[string]string)
-	dir = filepath.Clean(dir)
-	files, err := os.ReadDir(dir); if err != nil { log.Fatal(err) }
-	for _, file := range files {
-		if filepath.Ext(file.Name()) == ext && file.IsDir() == false {
-			file_str := file_read_str(filepath.Join(dir, file.Name()))
-			f_map[file_str] = strings.TrimSuffix(file.Name(), ext)
-		}
-    }
-    return f_map
-}
-
 
 ////////////
 // CONFIG //
@@ -120,7 +106,7 @@ func map_files(dir string, ext string) (map[string]string) {
 // set key value in config file
 // create file if it doesn't exist
 func cfg_set(key, value string) {
-	if !path_exists_chk(CFG_FILE) {	 // create file
+	if !path_exists(CFG_FILE) {	 // create file
 		file_write_str(CFG_FILE, "", true) 
 	}
 	key = strings.TrimSpace(key)
@@ -143,7 +129,7 @@ func cfg_set(key, value string) {
 // get first matching key value from config file
 // return "" if file doesn't exist or no key match
 func cfg_get(key string) (string) {
-	if !path_exists_chk(CFG_FILE) { return "" }
+	if !path_exists(CFG_FILE) { return "" }
 	key = strings.TrimSpace(key)
 	file_str := file_read_str(CFG_FILE)
 	lines := strings.Split(file_str, "\n")

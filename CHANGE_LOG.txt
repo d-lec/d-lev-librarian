@@ -14,7 +14,59 @@
 ////////////////
 // CHANGE LOG //
 ////////////////
-2023-06-21 : v8
+2023-07-21 : v9 - RELEASED as 2023-07-26 - 
+- Backup EEPROM file name: yyyy-mm-dd_backup.eeprom
+
+2023-07-19 : v9
+- New SW load: 0x6be9394f
+- Merged ftos & ftok into pump.
+- Merged stof & ktof into dump.
+- Command rename: btos => bank.
+
+2023-07-16 : v9
+- Command knob now has :all selector and -min flag.
+- Command btos now uses ftos.
+- Serial port open/close consolidation.
+
+2023-07-15 : v9
+- Command view now works with PRE, PRO, and EEPROM files too.
+- A bit of update menu logic work.
+
+2023-07-13 : v9
+- Command knob -v now switches LCD screen.
+
+2023-07-12 : v9
+- General technical debt cleanup.
+- file_read_str() now calls file_read_chk().
+- Command knob -v now shows LCD page.
+
+2023-07-11 : v9
+- Command match now works with PRE, PRO, and EEPROM files too.
+- More error & exit handling work.
+- Command split and others refactoring.
+
+2023-07-10 : v9
+- Total revamp of error & exit handling.
+
+2023-07-09 : v9
+- Command ver can now read SPI & EEPROM file version & test CRC.
+- Version info now in a package struct.
+- User quit now via os.Exit(0).
+
+2023-07-06 : v9
+- Command knob now accepts -k <page>:min to minimize all knobs on page.
+
+2023-07-05 : v9
+- Command knob now accepts simultaneous set and offset & frequency input.
+- Much futzing around with d-lib_pkg and some functions.
+
+2023-07-04 : v9
+- Command knob now displays all knob values with -v flag.
+
+2023-07-02 : v9
+- Less cryptic / confusing error messages.
+
+2023-06-21 : v8 - RELEASED as 2023-06-20 - 
 - Config file handling more robust.
 - Lots of path/file/ext edits.
 - dir_exists_chk() => path_exists_chk() with GO preferred syntax.
@@ -34,7 +86,7 @@
 - Command help now has -v verbose flag.
 
 2023-06-17 : v8
-- Serial port idenfier is now system name rather than number from list.
+- Serial port identifier is now system name rather than number from list.
 - Serial port no longer managed by main(), port open reads config file.
 - More verbose config file interaction.
 - SW_NEW, SW_OLD, DATE now in d-lib_pkg.go.

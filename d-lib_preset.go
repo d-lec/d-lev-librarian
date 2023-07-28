@@ -8,7 +8,6 @@ import (
 	"math"
 	"fmt"
 	"strings"
-	"log"
 	"os"
 	"path/filepath"
 	"math/rand"
@@ -198,7 +197,7 @@ var knob_pnames = []string {
 	"s_p6_ds",  "p_p7_ds",  "s_p2_ds",  "s_p0_ds",  "ps_p3_ds",  "s_p3_ds", "ps_p2_ds", "menu_pg_ds",  // [152:159] SYSTEM
 }
 
-// these are in UI page order
+// these are in UI screens order
 var page_names = []string {
 	"    D-LEV",
 	"   LEVELS",
@@ -226,36 +225,36 @@ var page_names = []string {
 func ptype_max(ptype int) int {
 	max := 0
 	switch {
-	case ptype < 0x20 : // 0 thru 31
-		max = ptype
-	case ptype < 0x70 :  // 31, 63, 127, 255
-		max = (1 << ((ptype & 0x3) + 5)) - 1
-	case ptype < 0x72 : 
-		max = 192
-	case ptype == 0x72 :
-		max = 127
-	case ptype < 0x78 :
-		max = 63
-	case ptype == 0x7d :
-		max = 99
-	case ptype == 0x7e :
-		max = 249
-	case ptype == 0x7f :
-		max = 19
-	case ptype < 0xc0 :
-		max = ptype & 0x1f
-	case ptype < 0xf0 :  // 15, 31, 63, 127
-		max = (1 << ((ptype & 0x3) + 4)) - 1
-	case ptype == 0xf0 :
-		max = 127
-	case ptype < 0xf3 :
-		max = 63
-	case ptype == 0xfc :
-		max = 31
-	case ptype == 0xfd :
-		max = 99
-	default:
-		max = 0
+		case ptype < 0x20 : // 0 thru 31
+			max = ptype
+		case ptype < 0x70 :  // 31, 63, 127, 255
+			max = (1 << ((ptype & 0x3) + 5)) - 1
+		case ptype < 0x72 : 
+			max = 192
+		case ptype == 0x72 :
+			max = 127
+		case ptype < 0x78 :
+			max = 63
+		case ptype == 0x7d :
+			max = 99
+		case ptype == 0x7e :
+			max = 249
+		case ptype == 0x7f :
+			max = 19
+		case ptype < 0xc0 :
+			max = ptype & 0x1f
+		case ptype < 0xf0 :  // 15, 31, 63, 127
+			max = (1 << ((ptype & 0x3) + 4)) - 1
+		case ptype == 0xf0 :
+			max = 127
+		case ptype < 0xf3 :
+			max = 63
+		case ptype == 0xfc :
+			max = 31
+		case ptype == 0xfd :
+			max = 99
+		default:
+			max = 0
 	}
 	return max
 	}
@@ -264,20 +263,29 @@ func ptype_max(ptype int) int {
 func ptype_min(ptype int) int {
 	min := 0
 	switch {
-	case ptype < 0x80 :
-		min = 0
-	case ptype < 0xa0 :  // -1, -2, ..., -16
-		min = -(ptype_max(ptype) + 1)
-	case ptype == 0xfc :
-		min = -127
-	default:
-		min = -ptype_max(ptype)
+		case ptype < 0x80 :
+			min = 0
+		case ptype < 0xa0 :  // -1, -2, ..., -16
+			min = -(ptype_max(ptype) + 1)
+		case ptype == 0xfc :
+			min = -127
+		default:
+			min = -ptype_max(ptype)
 	}
 	return min
 }
 
-// return type signed
-func ptype_signed(ptype, pint int) int {
+// return limited value of type
+func pint_lim(pint, ptype int) int {
+	min := ptype_min(ptype)
+	max := ptype_max(ptype)
+	if pint < min { return min }
+	if pint > max { return max }
+	return pint
+}
+
+// return signed value of type
+func pint_signed(pint, ptype int) int {
 	if ptype_min(ptype) < 0 { return int(int8(uint8(pint))) }
 	return pint
 }
@@ -286,11 +294,11 @@ func ptype_signed(ptype, pint int) int {
 func pints_signed(pints []int, pro bool) ([]int) {
 	if pro {
 		for pidx, param := range pro_params {
-			pints[pidx] = ptype_signed(param.ptype, pints[pidx])
+			pints[pidx] = pint_signed(pints[pidx], param.ptype)
 		}
 	} else {
 		for pidx, param := range pre_params {
-			pints[pidx] = ptype_signed(param.ptype, pints[pidx])
+			pints[pidx] = pint_signed(pints[pidx], param.ptype)
 		}
 	}
 	return pints
@@ -298,8 +306,7 @@ func pints_signed(pints []int, pro bool) ([]int) {
 
 // return filter freq value (type 0x70, 0x71)
 // 7041 * EXP2((ENC * (2^27) / 24) + 3/4)
-// input: [0:192]
-// output: 27 to 7040 (Hz)
+// [0:192] => [27:7040] (Hz)
 func filt_freq(pint int) (int) {
 	enc_mo := float64(int64(pint) * ((1 << 27) / 24) + 0xc0000000)
 	return int(7041 * (math.Pow(2, enc_mo / math.Pow(2, 27)) / math.Pow(2, 32)))
@@ -307,8 +314,7 @@ func filt_freq(pint int) (int) {
 
 // return reson freq value (type 0x72)
 // 48001 / ((((((~(ENC<<25))^4)*0.871)+((~(ENC<<25))>>3))>>22)+4)
-// input: [0:127]
-// output: 46 to 9600 (Hz)
+// [0:127] => [46:9600] (Hz)
 func reson_freq(pint int) (int) {
 	fs_rev := uint64(^(uint32(pint) << 25))
 	sq := (fs_rev * fs_rev) >> 32
@@ -316,14 +322,61 @@ func reson_freq(pint int) (int) {
 	return int(48001 / ((((uint64(float64(qd) * 0.871) + (fs_rev >> 3)) >> 22) + 4)))
 }
 
-// given pint and type, return display string[5]
-func enc_disp(pint int, ptype int) (string) {
+// given pint and type, return frequency
+func pint_freq(pint, ptype int) (int) {
 	switch ptype {
-		case 0x70, 0x71 : pint = filt_freq(pint)
-		case 0x72 : pint = reson_freq(pint)
-		default : pint = ptype_signed(ptype, pint)
+		case 0x70, 0x71 : return filt_freq(pint)
+		case 0x72 : return reson_freq(pint)
+		default : return pint_signed(pint, ptype)
 	}
-	return fmt.Sprintf("%5v", pint)
+}
+
+// given pint and type, return display string[5]
+func pint_disp(pint, ptype int) (string) {
+	return fmt.Sprintf("%5v", pint_freq(pint, ptype))
+}
+
+// return closest filter pint given freq (type 0x70, 0x71)
+// [27:7040] (Hz) => [0:192]
+func filt_pint(freq int) (int) {
+	p_best := 0
+	err_best := 0
+	first := true
+	for p := ptype_min(0x70); p <= ptype_max(0x70); p++ {
+		err := (freq - filt_freq(p)) * (freq - filt_freq(p))
+		if err < err_best || first { 
+			err_best = err
+			p_best = p
+		}
+		first = false
+	}
+	return p_best
+}
+
+// return closest reson pint given freq (type 0x72)
+// [46:9600] (Hz) => [0:127]
+func reson_pint(freq int) (int) {
+	p_best := 0
+	err_best := 0
+	first := true
+	for p := ptype_min(0x72); p <= ptype_max(0x72); p++ {
+		err := (freq - reson_freq(p)) * (freq - reson_freq(p))
+		if err < err_best || first { 
+			err_best = err
+			p_best = p
+		}
+		first = false
+	}
+	return p_best
+}
+
+// given frequency and type, return limited pint
+func freq_pint(freq, ptype int) (int) {
+	switch ptype {
+		case 0x70, 0x71 : return filt_pint(freq)
+		case 0x72 : return reson_pint(freq)
+		default : return pint_lim(freq, ptype)
+	}
 }
 
 // given pname, return ptype, plabel, pidx, pgroup
@@ -381,7 +434,7 @@ func knob_pre_order(kints []int, mode string) ([]int) {
 // put knob hex str in preset / slot order, return hex string
 func knob_pre_str(knob_str string, pro bool) (string) {
 	str_split := (strings.Split(strings.TrimSpace(knob_str), "\n"))
-	if len(str_split) < KNOBS { log.Fatalln("> Bad knob info!") }
+	if len(str_split) < KNOBS_TOTAL { error_exit("Bad knob info") }
 	hex_str := ""
 	line_str := ""
 	for pidx:=0; pidx<SLOT_BYTES; pidx++ {
@@ -395,17 +448,90 @@ func knob_pre_str(knob_str string, pro bool) (string) {
 	return hex_str
 }
 
+// split eeprom str into pre / pro / spi strings
+func split_eeprom_str(eeprom_str string) (string, string, string) {
+	str_split := strings.Split(strings.TrimSpace(eeprom_str), "\n")
+	pre_str := ""
+	pro_str := ""
+	spi_str := ""
+	const lines = SLOT_BYTES/EE_RW_BYTES
+	for line, str := range str_split {
+		if line < PRE_SLOTS*lines { 
+			pre_str += str + "\n"
+		} else if line < SLOTS*lines { 
+			pro_str += str + "\n"
+		} else { 
+			spi_str += str + "\n"
+		}
+	}
+	return pre_str, pro_str, spi_str
+}
+
+// split pre/pro str into dlp strings
+func split_pre_pro_str(pre_pro_str string) ([]string) {
+	str_split := strings.Split(strings.TrimSpace(pre_pro_str), "\n")
+	var dlp_strs []string
+	dlp_str := ""
+	const lines = SLOT_BYTES/EE_RW_BYTES
+	for line, str := range str_split {
+		dlp_str += str + "\n"
+		if line % lines == lines - 1 { 
+			dlp_strs = append(dlp_strs, dlp_str)
+			dlp_str = ""
+		}
+	}
+	return dlp_strs
+}
+
+// read PRE|PRO|EEPROM file and extract dlp strings
+func file_dlp_strs(file, mode string) ([]string, string) {
+	file_str := ""
+	ext := filepath.Ext(file)
+	switch ext {
+		case ".pre" :
+			file_str = file_read_str(file)
+		case ".pro" :
+			file_str = file_read_str(file)
+			mode = "pro"
+		case ".eeprom" :
+			file_str = file_read_str(file)
+			switch mode {
+				case "pro" : _, file_str, _ = split_eeprom_str(file_str)
+				default : file_str, _, _ = split_eeprom_str(file_str)
+			}
+		case "" : error_exit(fmt.Sprint("Missing file extension"))
+		default : error_exit(fmt.Sprint("Wrong file extension: ", ext))
+	}
+	return split_pre_pro_str(file_str), mode
+}
+
+// read SPI|EEPROM file and extract software strings
+func file_sw_strs(file string) ([]string) {
+	ext := filepath.Ext(file)
+	file_str := ""
+	switch ext {
+		case ".spi" :
+			file_str = file_read_str(file)
+		case ".eeprom" :
+			file_str = file_read_str(file)
+			_, _, file_str = split_eeprom_str(file_str)
+		case "" : error_exit(fmt.Sprint("Missing file extension"))
+		default : error_exit(fmt.Sprint("Wrong file extension: ", ext))
+	}
+	return strings.Split(strings.TrimSpace(file_str), "\n")
+}
+
 // generate knob ui display strings
 func knob_ui_strs(hex_str string) ([]string) {
 	kints := hexs_to_ints(hex_str, 1)
-	if len(kints) < KNOBS { log.Fatalln("> Bad knob info!") }
+	if len(kints) < KNOBS_TOTAL { error_exit("Bad knob info") }
 	var strs []string
 	for kidx, kname := range knob_pnames {
 		ptype, plabel, _, _ := pname_lookup(kname)
-		if kidx % UI_PG_KNOBS == UI_PAGE_KNOB { 
-			strs = append(strs, page_names[kidx / UI_PG_KNOBS])
+		if kidx % KNOBS == PAGE_SEL_KNOB { 
+			strs = append(strs, page_names[kidx / KNOBS])
 		} else { 
-			strs = append(strs, plabel + enc_disp(kints[kidx], ptype)) 
+			strs = append(strs, plabel + pint_disp(kints[kidx], ptype)) 
 		}
 	}
 	return strs
@@ -414,15 +540,15 @@ func knob_ui_strs(hex_str string) ([]string) {
 // generate pre / pro / slot ui display strings
 func pre_ui_strs(hex_str string, pro bool) ([]string) {
 	pints := hexs_to_ints(hex_str, 4)
-	if len(pints) < SLOT_BYTES { log.Fatalln("> Bad file / slot info!") }
+	if len(pints) < SLOT_BYTES { error_exit("Bad file / slot info") }
 	var strs []string
 	for idx, pname := range knob_pnames {
 		ptype, plabel, pidx, pgroup := pname_lookup(pname)
-		if idx % UI_PG_KNOBS == UI_PAGE_KNOB { 
-			strs = append(strs, page_names[idx / UI_PG_KNOBS])
+		if idx % KNOBS == PAGE_SEL_KNOB { 
+			strs = append(strs, page_names[idx / KNOBS])
 		} else { 
 			if pro == (pgroup == "pro") && pgroup != "not" {
-				strs = append(strs, plabel + enc_disp(pints[pidx], ptype)) 
+				strs = append(strs, plabel + pint_disp(pints[pidx], ptype)) 
 			} else {
 				strs = append(strs, plabel + "     ") 
 			}
@@ -432,16 +558,23 @@ func pre_ui_strs(hex_str string, pro bool) ([]string) {
 }
 
 // render ui display strings to printable string
-func ui_prn_str(strs []string) (string) {
-	if len(strs) < len(knob_pnames) { log.Fatalln("> Bad input info!") }
+func ui_prn_str(strs []string, mark int) (string) {
+	if len(strs) < len(knob_pnames) { error_exit("Bad input info") }
 	h_line_sub := "+" + strings.Repeat("-", 22);
-	h_line := strings.Repeat(h_line_sub, UI_PRN_PG_COLS) + "+\n";
+	h_line := strings.Repeat(h_line_sub, PAGES_COLS) + "+\n";
 	prn_str := h_line
-	for prow:=0; prow<UI_PRN_PG_ROWS; prow++ {
-		for uirow:=0; uirow<UI_PG_ROWS; uirow++ {
-			for pcol:=0; pcol<UI_PRN_PG_COLS; pcol++ {
-				idx := (prow * UI_PG_COLS * UI_PG_ROWS * UI_PRN_PG_COLS) + (uirow * UI_PG_COLS) + (pcol * UI_PG_COLS * UI_PG_ROWS)
-				prn_str += "| " + strs[idx] + "  " + strs[idx+1] + " "
+	for prow:=0; prow<PAGES_ROWS; prow++ {
+		for uirow:=0; uirow<KNOBS_ROWS; uirow++ {
+			for pcol:=0; pcol<PAGES_COLS; pcol++ {
+				idx := (prow * KNOBS * PAGES_COLS) + (uirow * KNOBS_COLS) + (pcol * KNOBS)
+				prn_str += "|"
+				for i:=0; i<KNOBS_COLS; i++ {
+					if idx+i == mark { 
+						prn_str += "[" + strs[idx+i] + "]"
+					} else {
+						prn_str += " " + strs[idx+i] + " "
+					}
+				}
 			}
 			prn_str += "|\n"
 		}
@@ -454,21 +587,21 @@ func ui_prn_str(strs []string) (string) {
 func diff_pres(pre_str0, pre_str1 string, pro bool) ([]string, []string, []bool) {
 	pints0 := hexs_to_ints(pre_str0, 4)
 	pints1 := hexs_to_ints(pre_str1, 4)
-	if (len(pints0) < SLOT_BYTES) || (len(pints1) < SLOT_BYTES) { log.Fatalln("> Bad preset info!") }
+	if (len(pints0) < SLOT_BYTES) || (len(pints1) < SLOT_BYTES) { error_exit("Bad preset info") }
 	var strs0 []string
 	var strs1 []string
 	var diffs []bool
 	for kidx, pname := range knob_pnames {
 		ptype, plabel, pidx, pgroup := pname_lookup(pname)
-		if kidx % UI_PG_KNOBS == UI_PAGE_KNOB { 
-			strs0 = append(strs0, page_names[kidx / UI_PG_KNOBS])
-			strs1 = append(strs1, page_names[kidx / UI_PG_KNOBS])
+		if kidx % KNOBS == PAGE_SEL_KNOB { 
+			strs0 = append(strs0, page_names[kidx / KNOBS])
+			strs1 = append(strs1, page_names[kidx / KNOBS])
 			diffs = append(diffs, false)
 		} else { 
 			if pro == (pgroup == "pro") && pgroup != "not" {
-				strs0 = append(strs0, plabel + enc_disp(pints0[pidx], ptype)) 
+				strs0 = append(strs0, plabel + pint_disp(pints0[pidx], ptype)) 
 				if pints0[pidx] != pints1[pidx] {
-					strs1 = append(strs1, plabel + enc_disp(pints1[pidx], ptype)) 
+					strs1 = append(strs1, plabel + pint_disp(pints1[pidx], ptype)) 
 					diffs = append(diffs, true)
 				} else {
 					strs1 = append(strs1, plabel + "     ") 
@@ -486,29 +619,27 @@ func diff_pres(pre_str0, pre_str1 string, pro bool) ([]string, []string, []bool)
 
 // render ui display strings to printable string
 func diff_prn_str(strs0, strs1 []string, diffs []bool) (string) {
-	if (len(strs0) < len(knob_pnames)) || (len(strs1) < len(knob_pnames)) || (len(diffs) < len(knob_pnames)) { 
-		log.Fatalln("> Bad input info!") 
-	}
+	if (len(strs0) < len(knob_pnames)) || (len(strs1) < len(knob_pnames)) || (len(diffs) < len(knob_pnames)) { error_exit("Bad input info") }
 	h_line_sub := "+" + strings.Repeat("-", 22);
 	h_line := strings.Repeat(h_line_sub, 2) + "+\n";
 	prn_str := ""
 	chgs := 0
-	for uipg:=0; uipg<UI_PAGES; uipg++ {
-		pg_str := ""
+	for scrn:=0; scrn<PAGES; scrn++ {
+		page_str := ""
 		chg_f := false
-		for uirow:=0; uirow<UI_PG_ROWS; uirow++ {
-			idx := uipg*UI_PG_ROWS*UI_PG_COLS + uirow*UI_PG_COLS
-			pg_str += "| " + strs0[idx] + "  " + strs0[idx+1] + " "
-			pg_str += "| " + strs1[idx] + "  " + strs1[idx+1] + " "
-			pg_str += "|\n"
+		for row:=0; row<KNOBS_ROWS; row++ {
+			idx := scrn*KNOBS + row*KNOBS_COLS
+			page_str += "| " + strs0[idx] + "  " + strs0[idx+1] + " "
+			page_str += "| " + strs1[idx] + "  " + strs1[idx+1] + " "
+			page_str += "|\n"
 			if diffs[idx] { chg_f = true; chgs++ }
 			if diffs[idx+1] { chg_f = true; chgs++ }
 		}
-		pg_str += h_line
-		if chg_f { prn_str += pg_str }
+		page_str += h_line
+		if chg_f { prn_str += page_str }
 	}
 	if chgs != 0 { prn_str = h_line + prn_str }  // top line
-	prn_str += fmt.Sprintln("> differences", chgs)
+	prn_str += fmt.Sprintln("> differences:", chgs)
 	return strings.TrimSpace(prn_str)
 }
 
@@ -516,7 +647,7 @@ func diff_prn_str(strs0, strs1 []string, diffs []bool) (string) {
 func comp_pres(pre_str0, pre_str1 string, pro bool) (int) {
 	pints0 := pints_signed(hexs_to_ints(pre_str0, 4), pro)
 	pints1 := pints_signed(hexs_to_ints(pre_str1, 4), pro)
-	if (len(pints0) < SLOT_BYTES) || (len(pints1) < SLOT_BYTES) { log.Fatalln("> Bad preset info!") }
+	if (len(pints0) < SLOT_BYTES) || (len(pints1) < SLOT_BYTES) { error_exit("Bad preset info") }
 	ssd := 0
 	if pro {
 		for pidx, _ := range pro_params {
@@ -547,7 +678,7 @@ func comp_file_data(data2_strs, name_strs, data_strs []string, pro, guess bool) 
 				first = false
 			}
 		}
-		if first { log.Fatalln("> No file data!") }
+		if first { error_exit("No file data") }
 		if ssd_min == 0 { 
 			strs = append(strs, name_strs[idx_min])
 		} else if guess {
@@ -561,26 +692,25 @@ func comp_file_data(data2_strs, name_strs, data_strs []string, pro, guess bool) 
 
 // render slots match display strings to printable string
 func slots_prn_str(strs []string, pro, hdr bool) (string) {
-	if len(strs) < SLOTS { log.Fatalln("> Bad slots info!") }
+	//if len(strs) < SLOTS { error_exit("Bad slots info") }
 	prn_str := ""  
 	if pro {
 		if hdr { prn_str += "// pro slots [0:5] //\n" }
-		for row:=0; row<PRO_SLOTS; row++ {
-			str := strings.TrimSpace(strs[row+PRE_SLOTS])
-			if hdr { prn_str += str
+		for row, str := range strs {
+			if hdr { prn_str += strings.TrimSpace(str)
 			} else { prn_str += fmt.Sprintf("[%1v] %s", row, str) }
 			prn_str += "\n"
 		}
 	} else if hdr {
-		for row:=0; row<PRE_SLOTS; row++ {
+		for row, str := range strs {
 			if (row % 10 == 0) {
 				prn_str += fmt.Sprint("// pre slots [", row, ":", row+9, "] //\n")
 			}
-			prn_str += strings.TrimSpace(strs[row]) + "\n"
+			prn_str += strings.TrimSpace(str) + "\n"
 		}
 	} else {
-		const cols int = 5
-		const rows int = PRE_SLOTS/cols
+		const cols = 5
+		const rows = PRE_SLOTS/cols
 		// find minimum column widths
 		var col_w [cols]int
 		for row:=0; row<rows; row++ {
@@ -617,18 +747,6 @@ func files_prn_str(strs2, strs []string) (string) {
 		prn_str += "\n"
 	}
 	return prn_str
-}
-
-// generate numbered bank string
-func num_bnk_str(hdr bool) (string) {
-	bnk_str := ""  
-	for row:=0; row<PRE_SLOTS; row++ {
-		if hdr && (row % 10 == 0) {
-			bnk_str += fmt.Sprint("// pre slots [", row, ":", row+9, "] //\n")
-		}
-		bnk_str += fmt.Sprintf("%03d", row) + "\n"
-	}
-	return bnk_str
 }
 
 
@@ -690,17 +808,15 @@ func reso_rescale(reso int) (int) {
 
 // batch read, process, write all *.dlp files from dir to dir2
 func process_dlps(dir, dir2 string, pro, mono, update, robs, yes bool) {
-	dir = filepath.Clean(dir)
-	dir2 = filepath.Clean(dir2)
 	// prompt user
-	if !path_exists_chk(dir) {
-		log.Fatalln("> Directory", dir, "does not exist!") 
-	} else if dir == dir2 { 
-		if !user_prompt("Overwrite DLP files in SOURCE directory " + dir + "?", yes) { return }
-	} else if path_exists_chk(dir2) { 
-		if !user_prompt("Overwrite DLP files in DESTINATION directory " + dir2 + "?", yes)  { return }
+	dir_chk(dir)
+	dir_blank_chk(dir2)
+	if dir == dir2 { 
+		if !user_prompt("Overwrite DLP files in SOURCE directory " + dir + "?", yes, false) { return }
+	} else if path_exists(dir2) { 
+		if !user_prompt("Overwrite DLP files in DESTINATION directory " + dir2 + "?", yes, false)  { return }
 	}
-	files, err := os.ReadDir(dir); if err != nil { log.Fatal(err) }
+	files, err := os.ReadDir(dir); err_chk(err)
 	upd_cnt := 0
 	dlp_cnt := 0
 	for _, file := range files {
@@ -880,8 +996,7 @@ func process_dlps(dir, dir2 string, pro, mono, update, robs, yes bool) {
 
 // find DLP files with various values
 func find_dlp(dir string) {
-	dir = filepath.Clean(dir)
-	files, err := os.ReadDir(dir); if err != nil { log.Fatal(err) }
+	files, err := os.ReadDir(dir); err_chk(err)
 	dlp_cnt := 0
 	find_cnt := 0
 	for _, file := range files {
@@ -892,6 +1007,15 @@ func find_dlp(dir string) {
 			// read in
 			file_str := file_read_str(file_path)
 			pints := pints_signed(hexs_to_ints(file_str, 4), false)
+
+
+			if pints[21] > 0 && pints[29] > 0 && pints[7] > 0 {  // nois, puls, 1_osc:xmix
+				fmt.Println("nois", pints[21])
+				fmt.Println("puls", pints[29])
+				fmt.Println("xmix", pints[7])
+				fmt.Println("-", file.Name(), "\n")
+				find_cnt++
+			}
 
 /*			
 			if pints[95] != 0 {  // cvol
@@ -943,7 +1067,7 @@ func find_dlp(dir string) {
 				find_cnt++
 			}
 */
-
+/*
 			if pints[39] != 0 && (pints[40] == 2 || pints[40] == -2) {  // xmix non-zero && |mode| == 2
 //				fmt.Println("freq", pints[36])
 //				fmt.Println("hpf", pints[38])
@@ -955,7 +1079,7 @@ func find_dlp(dir string) {
 				fmt.Println("-", file.Name(), "\n")
 				find_cnt++
 			}
-
+*/
 
 			
 		}

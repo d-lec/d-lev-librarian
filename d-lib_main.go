@@ -7,43 +7,39 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
+	"fmt"
 )
 
 func main() {
 
 	// do update if no args
 	if len(os.Args) < 2 {
-		update_cmd(WORK_DIR)
+		menu_cmd(WORK_DIR)
     } else {
 		// parse subcommands
 		switch os.Args[1] {
-		case "update" : update()
-		case "help", "-help", "-h", "/h" : help()
-		case "ports" : ports()
-		case "view" : view()
-		case "match" : match()
-		case "diff" : diff()
-		case "ktof" : ktof()
-		case "ftok" : ftok()
-		case "stof" : stof()
-		case "ftos" : ftos()
-		case "btos" : btos()
-		case "dump" : dump()
-		case "pump" : pump()
-		case "split" : split()
-		case "join" : join()
-		case "morph" : morph()
-		case "batch" : batch()
-		case "knob" : knob()
-		case "hcl" : hcl_cmd()
-		case "loop" :loop_cmd()
-		case "ver" : ver_cmd()
-		case "acal" : acal_cmd()
-		case "reset" : reset_cmd()
-		case "dev" : dev()  // dev stuff
-		default : log.Fatalln("> Unknown command:", os.Args[1])
+			case "menu" : menu()
+			case "help", "-help", "-h", "/h" : help()
+			case "ports" : ports()
+			case "view" : view()
+			case "match" : match()
+			case "diff" : diff()
+			case "bank" : bank()
+			case "dump" : dump()
+			case "pump" : pump()
+			case "split" : split()
+			case "join" : join()
+			case "morph" : morph()
+			case "batch" : batch()
+			case "knob" : knob()
+			case "ver" : ver()
+			case "hcl" : hcl_cmd()
+			case "loop" :loop_cmd()
+			case "acal" : acal_cmd()
+			case "reset" : reset_cmd()
+			case "dev" : dev()  // dev stuff
+			default : error_exit(fmt.Sprint("Unknown command: ", os.Args[1]))
 		}
 	}
 }  // end of main()
@@ -65,10 +61,19 @@ func help() {
 // list free serial ports / set port
 func ports() {
 	sub := flag.NewFlagSet("ports", flag.ExitOnError)
-	port_str := sub.String("p", "", "`port` number")
+	port := sub.String("p", "", "`port` number")
 	sub.Parse(os.Args[2:])
 	//
-	ports_cmd(*port_str)
+	ports_cmd(*port)
+}
+
+// report active or file version
+func ver() {
+	sub := flag.NewFlagSet("ver", flag.ExitOnError)
+	file := sub.String("f", "", "source `file` name")
+	sub.Parse(os.Args[2:])
+	//
+	ver_cmd(*file, false)
 }
 
 // view knobs, DLP file, slot
@@ -80,18 +85,20 @@ func view() {
 	slot := sub.String("s", "", "view `slot` number")
 	sub.Parse(os.Args[2:])
 	//
-	view_cmd(*file, *pro, *knobs, *slot)
+	view_cmd(*file, *pro, *knobs, *slot, -1)
 }
 
 // twiddle knob
 func knob() {
 	sub := flag.NewFlagSet("knob", flag.ExitOnError)
 	knob := sub.String("k", "", "page:knob[0:6]")
-	offset := sub.String("o", "", "knob offset value")
-	val := sub.String("s", "", "knob set value")
+	ofs := sub.String("o", "", "knob offset `value`")
+	set := sub.String("s", "", "knob set `value`")
+	min := sub.Bool("min", false, "set knob min")
+	view := sub.Bool("v", false, "view all knobs")
 	sub.Parse(os.Args[2:])
 	//
-	knob_cmd(*knob, *offset, *val)
+	knob_cmd(*knob, *ofs, *set, *min, *view)
 }
 
 // diff DLP file(s) / slot(s) / knobs
@@ -111,100 +118,63 @@ func diff() {
 // match slots / DLP files w/ DLP files & list
 func match() {
 	sub := flag.NewFlagSet("match", flag.ExitOnError)
-	dir := sub.String("d", ".", "`directory` name")
-	dir2 := sub.String("d2", ".", "`directory` name")
+	dir := sub.String("d", "", "`directory` name")
+	dir2 := sub.String("d2", "", "`directory` name")
+	file := sub.String("f", "", "compare `file` name")
 	pro := sub.Bool("pro", false, "profile mode")
 	hdr := sub.Bool("hdr", false, "header format")
 	guess := sub.Bool("g", false, "guess")
 	slots := sub.Bool("s", false, "slots")
 	sub.Parse(os.Args[2:])
 	//
-	match_cmd(*dir, *dir2, *pro, *hdr, *guess, *slots)
+	match_cmd(*dir, *dir2, *file, *pro, *hdr, *guess, *slots)
 }
 
 
-//////////////////////
-// download to file //
-//////////////////////
+////////////////////////////
+// file upload & download //
+////////////////////////////
 
 // dump to file
 func dump() {
 	sub := flag.NewFlagSet("dump", flag.ExitOnError)
 	file := sub.String("f", "", "target `file` name")
-	yes := sub.Bool("y", false, "overwrite files")
-	sub.Parse(os.Args[2:])
-	//
-	dump_cmd(*file, *yes)
-}
-
-// knobs => *.dlp
-func ktof() {
-	sub := flag.NewFlagSet("ktof", flag.ExitOnError)
-	file := sub.String("f", "", "target `file` name")
-	pro := sub.Bool("pro", false, "profile mode")
-	yes := sub.Bool("y", false, "overwrite files")
-	sub.Parse(os.Args[2:])
-	//
-	ktof_cmd(*file, *pro, *yes)
-}
-
-// slot => *.dlp
-func stof() {
-	sub := flag.NewFlagSet("stof", flag.ExitOnError)
 	slot := sub.String("s", "", "source `slot` number")
-	file := sub.String("f", "", "target `file` name")
+	knobs := sub.Bool("k", false, "source knobs")
 	pro := sub.Bool("pro", false, "profile mode")
 	yes := sub.Bool("y", false, "overwrite files")
 	sub.Parse(os.Args[2:])
 	//
-	stof_cmd(*slot, *file, *pro, *yes)
+	dump_cmd(*file, *slot, *knobs, *pro, *yes)
 }
-
-
-//////////////////////
-// upload from file //
-//////////////////////
 
 // pump from file
 func pump() {
 	sub := flag.NewFlagSet("pump", flag.ExitOnError)
 	file := sub.String("f", "", "source `file` name")
-	sub.Parse(os.Args[2:])
-	//
-	pump_cmd(*file)
-}
-
-// *.dlp => knobs
-func ftok() {
-	sub := flag.NewFlagSet("ftok", flag.ExitOnError)
-	file := sub.String("f", "", "source `file` name")
-	pro := sub.Bool("pro", false, "profile mode")
-	sub.Parse(os.Args[2:])
-	//
-	ftok_cmd(*file, *pro)
-}
-
-// *.dlp => slot
-func ftos() {
-	sub := flag.NewFlagSet("ftos", flag.ExitOnError)
 	slot := sub.String("s", "", "target `slot` number")
-	file := sub.String("f", "", "source `file` name")
+	knobs := sub.Bool("k", false, "target knobs")
 	pro := sub.Bool("pro", false, "profile mode")
 	sub.Parse(os.Args[2:])
 	//
-	ftos_cmd(*slot, *file, *pro)
+	pump_cmd(*file, *slot, *knobs, *pro)
 }
 
 // *.bnk => *.dlps => slots
-func btos() {
+func bank() {
 	sub := flag.NewFlagSet("btos", flag.ExitOnError)
 	slot := sub.String("s", "", "starting `slot` number")
 	file := sub.String("f", "", "bank `file` name")
 	pro := sub.Bool("pro", false, "profile mode")
 	sub.Parse(os.Args[2:])
 	//
-	btos_cmd(*slot, *file, *pro)
+	bank_cmd(*slot, *file, *pro)
 }
+
+
+////////////////////////
+// split / join files //
+////////////////////////
 
 // split bulk files
 func split() {
@@ -237,11 +207,11 @@ func morph() {
 	knobs := sub.Bool("k", false, "source knobs")
 	slot := sub.String("s", "", "source `slot` number")
 	seed := sub.Int("i", timeseed(), "initial seed")
-	mo := sub.Int("mo", 0, "oscillator `mult`iplier")
-	mn := sub.Int("mn", 0, "noise `mult`iplier")
-	me := sub.Int("me", 0, "eq (bass & treble) `mult`iplier")
-	mf := sub.Int("mf", 0, "filter `mult`iplier")
-	mr := sub.Int("mr", 0, "resonator `mult`iplier")
+	mo := sub.Int("mo", 0, "oscillator multiplier")
+	mn := sub.Int("mn", 0, "noise multiplier")
+	me := sub.Int("me", 0, "eq (bass & treble) multiplier")
+	mf := sub.Int("mf", 0, "filter multiplier")
+	mr := sub.Int("mr", 0, "resonator multiplier")
 	sub.Parse(os.Args[2:])
 	morph_cmd(*file, *knobs, *slot, *seed, *mo, *mn, *me, *mf, *mr)
 }
@@ -267,12 +237,12 @@ func batch() {
 }
 
 // do a bunch of update stuff via interactive menu
-func update() {
-	sub := flag.NewFlagSet("update", flag.ExitOnError)
+func menu() {
+	sub := flag.NewFlagSet("menu", flag.ExitOnError)
 	dir := sub.String("d", WORK_DIR, "work `directory` name")
 	sub.Parse(os.Args[2:])
 	//
-	update_cmd(*dir)	
+	menu_cmd(*dir)	
 }
 
 
@@ -281,13 +251,21 @@ func update() {
 /////////
 
 func dev() {
-	/*
+
 	// find DLP files with certain characteristics
 	sub := flag.NewFlagSet("dev", flag.ExitOnError)
 	dir := sub.String("d", ".", "`directory` name")
 	sub.Parse(os.Args[2:])
 	//
 	find_dlp(*dir)
-	*/
-	dev_cmd()
+	//dev_cmd()
+
+/*
+	sub := flag.NewFlagSet("dev", flag.ExitOnError)
+	str := sub.String("s", "", "test string")
+	sub.Parse(os.Args[2:])
+	//
+	fmt.Print("_", *str, "_\n")
+*/
+
 }
