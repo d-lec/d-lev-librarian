@@ -1,0 +1,524 @@
+////////////////
+// CHANGE LOG //
+////////////////
+2022-07-06 : 0x129
+- All hilite x/y modulo movement removed.
+
+2022-07-05 : 0x129
+- "etok" uploads preset knobs only.
+- New "etok_sys" uploads profile knobs only.
+- Swapped ALT & CTRL w/ hilite behavior.
+- CTRL + UP / DN enables hilite.
+- Hilite w/ ALT now does x +/-2, y +/-4 moves everywhere like on F1 screen.
+
+2022-07-04 : 0x129
+- ALT + UP enables the hilite.
+
+2022-07-02 : 0x129
+- Tiny bit of cosmetic cleanup.
+
+2022-06-28 : 0x129
+- Fixed spi writes not working.
+- Fixed ptoe_sys (was changing non-sys knobs).
+- pre pump & dump cover preset[-120:120] AND profile[-7:7] areas.
+- pro pump & dump cover profile[-7:7] area.
+
+2022-06-27 : 0x129
+- Fixed ktoe negative value reads.
+- New "pro_pump" & "pro_dump" commmands w/ new *.pro file type.
+- Some sub refactoring & renaming.
+
+2022-06-26 : 0x129
+- Fixed several incorrect encoder types.
+- Fixed editor input of filter frequencies (type mismatch)
+- New type 0xfd for cent[-99:99].
+
+2022-06-25 : 0x129
+- Fixed stol command.
+- Fixed several incorrect encoder types.
+- Fixed editor input of filter frequencies (type mismatch)
+- New "crc" command.
+- New "spi_dump" commmand.
+- New "pre_dump" & "pre_pump" commmands w/ new *.pre file type.
+- Consolidated *_dump, *_pump, *_sys commands.
+
+2022-06-24 : 0x129
+- Updated to reflect changes in UI.
+- +/-120 presets, +/-7 profiles.
+- New "acal" command uses new 'acal' HCL command.
+- Utilizing new "rk" & "wk" HCL commands to read & write knobs.
+- Tons o' rewriting in d-lib_preset.cpp.
+
+2022-05-06 : 0x128
+- Updated to reflect changes in UI.
+- Also monkeyed with hilite x/y limit/modulo.
+- stol now switches to F3 screen when done.
+- In F2 view hilite + 'u' updates preset, hilite idx++.
+- File view line number toggle is now 'n'.
+
+2022-05-04 : 0x127
+- Updated to reflect changes in UI.
+
+2022-04-30 : 0x126
+- Updated to reflect changes in UI.
+
+2022-04-16 : 0x125
+- Updated to reflect changes in UI.
+- Lower case load & stor on main page
+- "up" preset update command zero's out new bank knob and high 0xFF fluff.
+
+2022-03-17 : 0x124
+- Updated to reflect changes in UI.
+
+2022-01-23 : 0x123
+- Fixed BUG: stol would blow out if no *.dlp in current directory (sv_str_match()).
+- Generic "viewf" file view function w/ optional line numbering.
+- Restored behavior of hilite+enter back to putting name on cmd line.
+- Added F2 hilite v, e, c, options to view, edit, change directory.
+- Changed F2 declutter toggle v => d.
+- Added F3 hilite e option to edit slot contents & rename editor.
+- Limited eeprom_dump to 16kB code space (to save upload time).
+- Can still zero entire eeprom as pump continues to the end of the input file.
+- F2 file columns 5=>4 for more elbow room.
+
+2022-01-20 : 0x122
+- Added pump & dump eeprom functions.
+- Preset spi sub refactoring.
+
+2022-01-01 : 0x121
+- Updated to reflect changes in UI.
+
+2021-11-26 : 0x120
+- Updated to reflect changes in UI.
+
+2021-11-26 : 0x119
+- Updated to reflect changes in UI: MIDI:chan[0:16] => [-16:16].
+
+2021-11-26 : 0x118
+- updated to reflect changes in UI.
+- enter on F2&F3 screens: xfer hilited to editor
+- 's' on F2 screen: xfer hilited to editor (system)
+- tab on F2/F3 screens: hilited file/slot to cmd line
+
+2021-11-22 : 0x117
+- updated to reflect changes in UI: *cal[0:255] => *cal[-127:127]
+- new 'e' & 's' hilite commands to F2 screen (xfer preset/profile to editor)
+
+2021-11-22 : 0x116
+- updated to reflect changes in UI: 
+- type system overhaul
+- Post[0:1] => [0:3]
+- damp[0:63] => [0:31]
+
+2021-11-01 : 0x115
+- fixed program blowout on tab autocomplete
+- worked on F2 dir listing, default now is show everything, toggled by 'v'
+- hilite now turned off after any command
+- removed dir & ls commands
+- updated help file
+
+2021-10-29 : 0x114
+- added stoe_sys, etos_sys, stop_sys, and ptos_sys commands
+- fixed knob name: On => Out
+- minor edits to d-lib_help.txt (system "preset" => "profile")
+
+2021-10-22 : 0x113
+- updated to reflect changes in UI: Trak[0:1], Leak[0:7] => Auto[0:99], Vrev => Trad
+
+2021-09-27 : 0x112
+- updated to reflect changes in UI: Mute => On
+
+2021-09-07 : 0x111
+- updated to reflect changes in UI: Trak, Leak, P<>V, LED
+
+2021-07-12 : 0x110
+- bug in btos, tries to upload return at end of line:
+- added optional str_trim() to file_to_sv()
+- str_trim() slightly edited
+
+2021-07-07 : 0x109
+- can now enter filter frequencies directly & closest is picked
+- updated to reflect changes in UI: Adel=>Wait, type 30=>0xf8
+
+2021-06-30 : 0x108
+- noise vmod now bump/dip @ -24dB (n_p9_ds type 0x84 => 0x4a)
+
+2021-05-22 : 0x107
+- interactive serial port selection, now check ports [0:31]
+- added typical usage examples to help file
+
+2021-05-04 : 0x106
+- updated to reflect changes in UI
+
+2021-04-29 : 0x105
+- updated to reflect changes in SPI CSn & protected writes
+- removed etok from ptoe command
+- removed auto file list update for F2 (was blowing out)
+
+2021-04-04 : 0x104
+- updated to reflect changes
+
+2021-03-25 : 0x103
+- updated to reflect changes
+
+2021-03-07 : 0x102
+- serial port scan now automatically selects single open port
+- had to make all const string "static" otherwise they get corrupted!  lordy...
+
+2021-03-05 : 0x101
+- NO more config files, ports 0:9 are scanned & selected at start
+- ALL file reading now goes through file_to_str() in d-lib_pkg.cpp to nip any MS crap in the bud
+- more refactoring in d-lib_preset.cpp
+- combined console & serial files via ifdefs
+
+2021-03-04 : 0x101 (<= versioning!)
+- open serial ports now listed @ port open failure
+- new etok command, ptoe automatically calls it too
+- lots of refactoring in d-lib_preset.cpp, some in main
+- command renaming: 
+- stopn => stop_num
+- ptoes => ptoe_sys
+- etops => etop_sys
+
+2021-03-03
+- "up" command updates old preset file to newest encoder scalings.
+
+2021-02-25
+- updated for new Adel knob
+
+2021-02-23
+- updated for new boot code location, preset locations, knobs
+
+2021-01-11
+- updated to reflect changes (encoder name & range changes)
+
+2020-10-04
+- updated to reflect changes (moved DISPLAY page)
+
+2020-09-19
+- F1 CTRL + (R, L) now +/-10 the hilited encoder value 
+
+2020-09-16
+- added live update from the F1 screen!
+- changes to F1 editor hilite and +/-:
+  CTRL + (UP, DN) +/-1 the hilited encoder value 
+  CTRL + (R, L) +/-16 the hilited encoder value 
+  ALT + (R, L, UP, DN) move hilite one UI screen
+- added PRE_UPD_ADDR to d-lib_pkg.cpp
+- removed F1 cla command.
+
+2020-09-14
+- mass renaming of commands ('f' for preset file is ambiguous at this point):
+  ftoe => ptoe
+  ftoe_sys => ptoes
+  etof => etop
+  etof_sys => etops
+  stof => stop 
+  ftos => ptos
+- changed dump_usr command: <slot> <slot> stopn (slots to preset numbered files)
+- numbered preset files are now all 3 char: ???.pst to better sort
+- added SYS_ADDR & USR_ADDR to d-lib_pkg.cpp, removed from config files & process
+- help file contents now read in @ start
+- added safety timeouts to serial rx code
+- spi_pump activity indicator speed up
+
+2020-09-12
+- added "dump_usr" command: slots [0:103] => numbered files
+- added "ver" command to check SW version
+
+2020-09-10
+- fixed race condition between UART TX & RX (slot & knob value reads)
+- now have separate RX UART burst & wait sleep times
+
+2020-09-09
+- updated MS compile (to Roger)
+
+2020-08-20
+- updated to reflect changes (new "Line" knob on "LEVELS" UI page)
+
+2020-08-12
+- updated to reflect changes (a few type changes)
+
+2020-08-06
+- broken with Linux Mint v20 update!
+- issue was getch(), replaced with read, added cout flush before sleep
+- other minor improvements to input code
+
+2020-07-20
+- moved serial port defines to d-lib_pkg.cpp, increased buffer size 4x
+- using RX_MDLY for all polling
+
+2020-07-19
+- finally fixed Win32 delay by adding timeBeginPeriod(1), an issue which 
+  has plagued me literally for years
+- the issue with spi_pump not completing the reset on other prototype is due to 
+  how differing FPGA versions (v1305 vs v1306) handle it (v1305 locks up)
+- added progress indicator to btos, tweaked others
+
+2020-07-17
+- fixed PPst => PP knob name & type
+- fixed oct type
+
+2020-07-16
+- slight edits to make mswin compile work
+
+2020-07-14
+- added function key designations to screen titles
+
+2020-06-13
+- updated to reflect changes (usr params shuffle)
+- restored & edited "uf" command to update preset file param order
+
+2020-06-12
+- updated to reflect changes (sys params shuffle)
+
+2020-06-06
+- fixed hilite not tracking after delete of last file on F2 page
+
+2020-06-03
+- "cd" and "dir" alised to "chdir" and "ls"
+- fixed auto-complete (was only working for word at end of cmd line)
+
+2020-06-01
+- added "cd" command to change working directory
+- added "dir" command to show all files & directories
+- removed file overwrite check for commands "stof "& "ltob"
+
+2020-05-28
+- updated to reflect changes
+- new command "ktoe" which downloads current knob values to editor
+- btos now goes in neg dir w/ neg start slot, limited to +/-99
+- commented out "uf" update file command
+
+2020-04-10
+- fixed autocomplete: sv_str_match(sorted_i = false) 
+- DEL key in files hilite mode now deletes file and exits mode
+- auto switch to edit mode after ftoe and stoe
+- command updf => uf (easier to type)
+- simplified dir print to file for easier use later
+- updated UI to reflect changes
+
+2020-04-08
+- new functions:
+- pre_str_to_pre_uba()
+- pre_uba_to_pre_str()
+- dlp_update()
+- new command: updf (update file)
+
+2020-04-07
+- updated to reflect changes
+
+2020-04-03
+- updated to reflect changes
+
+2020-03-21
+- updated to reflect osc changes
+
+2020-03-20
+- *.spi & *.bnk files now show up in F2 files view
+  and can be deleted, etc.
+- file extension optional
+
+2020-03-19
+- new command: <file> <slot> btos (bank file to slots)
+- sw_pump => spi_pump (back to this)
+
+2020-03-18
+- new command: <file> ltob (list to bank file)
+- ...and there was much renaming:
+- ptof => print
+- dtof => stof
+- ftod => ftos
+- dtoe => stoe
+- etod => etos
+- ftoes => ftoe_sys
+- etofs => etof_sys
+- dlist => stol
+- spi_pump => sw_pump
+
+2020-03-15
+- added "etod" and "dtoe" commands.
+- ui page rename: "CORRECT" => "EZ-PITCH"
+
+2020-03-09
+- Pcal & Vcal [-127:127] => [0:255] (type 0x43 => 0x83)
+
+2020-03-07
+- moved knobs on display, v_axis, p_axis ui pages
+
+2020-03-06
+- moved pv_fmod ui page, *_en knobs on it
+
+2020-02-14
+- lots of command renaming / elimination:
+- rf, rsf, wf, wsf => ftoe, ftoes, etof, estof
+- dlf, ulf => dtof, ftod
+- dl => dlist
+- ren => rene
+- pf => ptof
+- removed ed, owf, owsf, ul, dl to ed
+
+2020-02-13
+- changes to reflect recent D-Lev SW
+- slots > 99 are system presets
+- hilite now off by default
+- type 0xff displays '0' value
+
+2020-01-31
+- FTDI chip speed-up code in d-lib_serial_linux.cpp
+
+2020-01-30
+- merged command result and error message systems
+
+2020-01-23
+- fixed sp_tx() in d-lib_serial_mswin.cpp (was crashing)
+- works in win7 & win10; +1 to console width makes it work in xp
+
+2020-01-22
+- help file viewer sub in d-lib_file_view.cpp
+- some function renaming in console files (for clarity)
+- frittering around w/ mswin compile (XP is a nightmare)
+
+2020-01-21
+- fixed MSWin config file (no repeated backslashes necessary?)
+- hilite now on by default on slots page
+
+2020-01-20
+- import from MSWin work on Win10 laptop
+- implemented d-lib.cfg file for serial port config & 1st cmd
+- new visual indication of pump & dl (dots)
+- serial port open check before using it (prevent crashing)
+- removed spi pump escape w/ kbhit (speedup)
+- fixed isspace() in pkg
+- everything that opens a file now closes it
+- all int => int32_t
+
+2020-01-16
+- working on MSWin compile:
+- new function us_sleep() in pkg.
+
+2020-01-15
+- new command "renf" to rename *.dlp file
+- new command "copf" to copy *.dlp file
+- ed hilite behaves more like hilite on other pages
+- hilite mode default for dir F2
+- fixed slots view init bug
+- big cleanup of cmd decode
+- some minor font changes
+
+2020-01-14
+- file list and slots pages can now accommodate zillions of entries
+- new command "delf" to download slot directly to file (won't overwrite)
+- separated ulf out from ul
+- increased SLOT_ROWS 20 => 25
+- commented out DEL key in file view (too dangerous?)
+
+2020-01-13
+- combined "dl" and "slots" commands
+- can now edit from dl buffer (but not to)
+- hilite works on slots screen, enter selects dl buffer to edit
+- can now directly upload from file to slot via <file> <slot> ul
+
+2020-01-12
+- help file ~done
+- new cla command to clear all preset enc values in ed mode
+- new ID banner text on screens
+- new pf file name display
+- command rename: rmf => delf
+- rewrote dir & bank display subs
+
+2020-01-11
+- bank & dir screens print to text file done
+- converted serial code from obj to struct & subs
+- preset struct now included in sub ports
+- ui mode is now an enum
+- command rename: del => rmf; prn => pf
+
+2020-01-10
+- new del command to delete *.dlp files
+- del in dir mode deletes file @ hilite via new del command
+- detailed cmd error messages
+- fixed crashing on bad file read / isspace / stol
+- more monkeying around with mode switching, ESC kills hilight & terminal modes
+
+2020-01-09
+- mass rename: ed_* => hl_*; ui_* => ed_*
+
+2020-01-08
+- bank view page working
+- F1 UI, F2 dir, F3 bank, F4 term, w/ second press toggling edit mode for UI & dir
+- preset object converted to struct & functions
+- tracked down painful isspace() bug blowing out, now using ch_is_white() in pkg
+
+2020-01-07
+- UI edit hilite "warps" to screens w/ CTRL
+- UI edit hilite inc/dec now via +/-
+- file list page working ok
+
+2020-01-06
+- autocomplete working
+- auto *.dlp extension
+- worked on file list page a bit (now F1)
+- terminal mode F4
+
+2020-01-05
+- have functions to do autocomplete
+
+2020-01-04
+- terminal mode accessable any time via F2
+- file list (unordered) via F3
+- files rename: lib* => d-lib*
+- serial spi code neatening
+
+2020-01-03
+- can upload preset from UI and file
+- can pump spi with software load
+- added kbd_hit() to rx_wait()
+
+2020-01-02
+- can download preset to UI and file
+- some subroutine shuffling / renaming
+
+2019-12-30
+- now opens serial port @ start, closes @ quit
+- has optional terminal mode at start
+
+2019-12-26
+- now using CTRL rather than ALT in F1 edit mode
+
+2019-12-25
+- F1 toggles edit mode, ESC clears it:
+  - up/dn/lt/rt: navigate
+  - #: write param
+  - # on title: write all params on that UI screen (use to zero all)
+  - ALT up/dn: inc/dec param
+  - ALT lt/rt: inc/dec param by 4
+
+2019-12-23
+- new owf and owsf commands to overwrite *.dlp files
+- wf and wsf will not overwrite existing files
+- in edit mode:
+  - + or - alone will inc / dec param
+  - whitespace alone will clear param
+  - number followed by + or whitespace will entrer that number
+  - number followed by - will enter that number as negative
+
+2019-12-22
+- UI screens draw working
+- cmd line working
+- preset file rd / wr / prn via cmd line working
+- UI hilite & editing working
+- MSWin compile option added 
+
+2019-12-20
+- preset file read and write working
+- UI screens print to text file working
+- can read & write UI knob locations
+- manually constructed and saved my system preset
+
+2019-12-19
+- much basic preset functionality working
+- can output preset UI screens to string
+
+2019-12-18
+- born

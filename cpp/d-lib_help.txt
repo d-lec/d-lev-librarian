@@ -1,0 +1,202 @@
+===================
+= D-LIB HELP FILE =
+===================
+
+COMMANDS:
+- Command line return status: <OK> = successful; <?> unsuccessful, followed by error.
+- The general format is parameters (if any) first, separated by spaces, 
+  terminated by the command, followed by a white space (SPACE, ENTER, etc.).
+- File extensions *.dlp, *.bnk, *.eeprom, *.pre, *.spi automatically added / removed.
+- System profile slots [-7:7] map to logical slots [121:135].
+- Use slots [-7:7] for system profile commands ending in "_sys".
+- Use slots [121:135] for system profile commands not ending in "_sys".
+- "r" refresh files and directories on F2 page.
+- "d" toggle decluttered view of files and directories on F2 page.
+- "quit" or "exit" quit the program.
+- "help" display this file.
+- "term" interactive terminal mode, ESC to exit.
+- "ver" read EEPROM software version.
+- "crc" read EEPROM software CRC.
+- "acal" do an auto calibration (immediate, no Wait timer).
+- "ktoe" download all knobs to editor.
+- "etok" upload editor to preset knobs.
+- "etok_sys" upload editor to profile knobs.
+- <dir> "cd" or "chdir" change working directory.
+- <name> "rene" rename editor (name mandatory).
+- <file> "print" print screen to text file (append; file optional).
+- <file> "viewf" view file contents (file mandatory).
+- <file> "delf" delete file (file mandatory).
+- <file> <file> "renf" rename file (files mandatory).
+- <file> <file> "copf" copy file (files mandatory).
+- <file> "ptoe" preset file to editor (file optional).
+- <file> "ptoe_sys" profile file to editor (file optional).
+- <file> "etop" editor to preset file (file optional).
+- <file> "etop_sys" editor to profile file (file optional).
+- <slot> "stoe" download slot to editor (slot mandatory).
+- <slot> "stoe_sys" download profile slot to editor (slot mandatory).
+- <slot> "etos" upload editor to slot (slot mandatory).
+- <slot> "etos_sys" upload editor to profile slot (slot mandatory).
+- <slot> <file> "stop" download slot to preset file (slot & file mandatory).
+- <slot> <file> "stop_sys" download slot to profile file (slot & file mandatory).
+- <slot> <slot> "stop_num" download slots to preset numbered files (slots mandatory).
+- <file> <slot> "ptos" upload preset file to slot (file & slot mandatory).
+- <file> <slot> "ptos_sys" upload profile file to slot (file & slot mandatory).
+- <slot> "stol" download slot to F3 list (slot optional).
+- <slot> <slot> "stol" download slots to F3 list (slots optional).
+- <file> "ltob" write list to bank file (file mandatory).
+- <file> <slot> "btos" upload bank file to slots (file & slot mandaory).
+- <file> "eeprom_pump" upload everything from *.eeprom file (file mandatory).
+- <file> "eeprom_dump" download everything to *.eeprom file (file mandatory).
+- <file> "spi_pump" upload SW from *.spi file (file mandatory).
+- <file> "spi_dump" download SW to *.spi file (file mandatory).
+- <file> "pre_pump" upload all presets & profiles from *.pre file (file mandatory).
+- <file> "pre_dump" download all presets & profiles to *.pre file (file mandatory).
+- <file> "pro_pump" upload all profiles from *.pro file (file mandatory).
+- <file> "pro_dump" download all profiles to *.pro file (file mandatory).
+
+KEYS:
+- F1 EDITOR screen; press again to toggle hilite & edit.
+- F2 FILES screen; press again to toggle hilite & scroll.
+- F3 SLOTS screen; press again to toggle hilite & scroll.
+- L, R, CTRL + (L, R), BKSP, DEL, HOME, END, act as usual w/o hilite.
+- UP, DN recall command history.
+- TAB filename auto-complete ("r" to refresh internal list).
+- ESC clear hilite, clear command line.
+- ENTER cursor to end & insert space.
+- CTRL + (UP, DN) enable hilite.
+- CTRL + (UP, DN) move hilite +/-4.
+- CTRL + (R, L) move hilite +/-2.
+- L, R, UP, DN move hilite +/-1.
+- HOME / END move hilite to start / end.
+
+F1 EDITOR:
+- ALT + (UP, DN) hilited knob +/-1.
+- ALT + (R, L) hilited knob +/-10.
+- DEL zero out the hilited knob / page.
+- number, ENTER|space will set the hilited knob.
+- If the hilite is on a UI page name all knobs on page set.
+- Input filter frequencies rounded to nearest possible.
+
+F2 FILES:
+- r refresh list of files & directories.
+- d toggle decluttered view of files & directories.
+- ENTER copy the hilited file name to command line.
+- DEL delete hilited file.
+- e edit hilited voice preset file & rename editor.
+- s edit hilited system profile file & rename editor.
+- v view hilited file (n toggles line numbers).
+- c change to hilited directory.
+
+F3 SLOTS:
+- <slot start> <slot end> "stol" to populate; "stol" to update.
+- ENTER copy hilited slot name to command line.
+- e download and edit hilited slot & rename editor.
+
+USAGE EXAMPLES:
+- Download knobs to EDITOR (do this before live editing):
+    ktoe
+- Upload EDITOR to preset knobs:
+    etok
+- Download voice preset slot 11 to EDITOR:
+    11 stoe
+- Download system profile slot 2 to EDITOR:
+    2 stoe_sys
+- Upload EDITOR to preset slot -20:
+    -20 etos
+- Upload EDITOR to profile slot 3:
+    3 etos_sys
+- Save EDITOR to preset file "oboe9.dlp":
+    oboe9 etop
+- Load preset file "dobro.dlp" to EDITOR:
+    dobro ptoe
+- Refresh the list of FILES:
+    r
+- Toggle FILES view of only relevant / all files & directories:
+    d
+- Change to directory below:
+    .. cd
+- Change to "presets" directory above:
+    presets cd
+- Upload preset file "cello8.dlp" to preset slot 9:
+    cello8 9 ptos
+- Download preset slot -5 to preset file "female7.dlp":
+    -5 female7 stop
+- List preset SLOTS 0 thru 20: 
+    0 20 stol 
+- Relist those same SLOTS again:
+    stol
+- List of SLOTS to bank file "mybank.bnk":
+    mybank.bnk ltob
+- Upload bank of presets in bank file "mybank.bnk" to preset slots 10, 11, 12, etc.:
+    mybank.bnk 10 btos
+- Upload bank of presets in bank file "oldbank.bnk" to preset slots -1, -2, -3, etc.:
+    oldbank.bnk -1 btos
+- Download preset slots 3 thru 6 to preset files 0003.dlp, 0004.dlp, etc.:
+    3 6 stop_num
+- Download profile slot 0 to profile file "my_sys.dlp":
+    0 my_sys stop_sys
+- Upload profile file "_sys_9.dlp" to profile slot 3
+    _sys_9 3 ptos_sys
+- Clear (zero out) preset slot 1:
+    _EMPTY_ 1 ptos
+- Clear (zero out) preset slots 21 thru 30:
+    _EMPTY_10.bnk 21 btos
+- Clear (zero out) preset slots -40 thru -89:
+    _EMPTY_50.bnk -40 btos
+- Read the software version:
+    ver
+- Read the EEPROM software CRC (S/B debb20e3):
+    crc
+- Upload software & all presets & profiles from file "factory.eeprom":
+    factory eeprom_pump
+- Download software & all presets & profiles to file "2022-01-23.eeprom":
+    2022-01-23 eeprom_dump
+- Upload software from file "f9e1c5c7.spi":
+    f9e1c5c7 spi_pump
+- Download software to file "sw_backup.spi":
+    sw_backup spi_dump
+- Upload all presets & profiles from file "my_dlev.pre":
+    my_dlev pre_pump
+- Download all presets & profiles to file "old_presets.pre":
+    old_presets pre_dump
+- Upload all profiles from file "my_setup.pro":
+    my_setup pro_pump
+- Download all profiles to file "your_setup.pro":
+    your_setup pro_dump
+- Drop to the terminal and read uP registers 0 through 9 (use space @ end!):
+    term
+    0 9 rr
+
+PROGRAM SETUP:
+- Unzip all files to a folder.
+
+PROGRAM COMPILE:
+- For POSIX target: comment out #define MSWIN at top of "d-lib.cpp".
+- compile "d-lib.cpp" with -std=gnu++11 option.
+
+RUN IN MSWIN:
+- Create desktop shortcut & edit it:
+- Properties | Layout
+- Screen Buffer Size: 86x30
+- Window Size: 86x30
+
+RUN IN LINUX:
+- Create desktop launcher & edit it:
+  [Desktop Entry]
+  Name=term
+  Exec=gnome-terminal --title="D-LIB" --geometry 86x30 -x /home/d-lib/d-lib
+  Comment=
+  Terminal=false
+  Icon=exec
+  Type=Application
+  Path=/home/demo/Documents/CPP/
+  Name[en_US]=D-LIB
+
+TIPS:
+- At startup, do a "ver" to check if serial connection is OK.
+- Before live editing, do a "ktoe" to pull in all the knob values.
+- Preset files must be in the current directory for F3 preset list names.
+- The highlight must be off to use the command line.
+- ALL files (dlp, bnk, pre, pro, spi, eeprom, etc.) are text files and are editable.
+- Use eeprom_dump to capture a snapshot of your entire system.
+- Use eeprom_pump to restore your system, or to perform a factory reset.
