@@ -7,4 +7,4 @@
  Please refer to the [D-Lev manual](http://d-lev.com/support/D-Lev_Manual_2023-06-20.pdf) for instructions.  
 
 # Repo conventions
-"Original text" for this repo can be found at `http://d-lev.com/support/d-lib_[RELEASE_DATE-YYYY-MM-DD].zip`. When mirroring an update from the official D-Lev website, please make a "git tag" corresponding to the release date, and upload the original zip file from the website to the Releases page.  
+"Original text" for this repo can be found at `http://d-lev.com/support/d-lib_[RELEASE_DATE-YYYY-MM-DD].zip`. When mirroring an update from the official D-Lev website, please switch to the `eric-original` branch, make a "git tag" corresponding to the release date, and upload the original zip file from the website to the Releases page.  
