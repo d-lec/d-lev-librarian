@@ -14,8 +14,51 @@
 ////////////////
 // CHANGE LOG //
 ////////////////
+2023-10-08 : v10 - RELEASED as 2023-10-02 -
+- Restructured knob_cmd(), removed -k pg:all -s 0 option (use min).
+
+2023-10-05 : v10
+- Now calling reset_cmd() after *.pro pump.
+
+2023-10-04 : v10
+- Profile SW versions back to ver_tbl[5].sw (2023-01-01) updateable.
+- Command diff now works with slots in PRE|PRO|EEPROM files too.
+- Restructured ports_cmd(), view_cmd(), match_cmd(), morph_cmd().
+
+2023-10-03 : v10
+- Explicit enumeration of errored Hive threads.
+
+2023-10-02 : v10
+- 0_OSC:harm type 0x24 => 0xcd (new type abs_tfs).
+- 1_OSC:xmix type 0xc1 => 0xcd.
+- RESON:xmix type 0xc5 => 0xcd.
+- Extended menu README info.
+
+2023-09-28 : v10
+- New stats command, displays fields Hz & hive errors.
+- 1_OSC:xmix type 0xc2 => 0xc1 (was wrong type).
+
+2023-09-27 : v10
+- 1_OSC:xmix type 0xf2 => 0xc2 (removed 0xf2 type).
+- All Ofs +/- types 0x26 => 0x27 (increase res to 0.75 1/2 step).
+- Backup EEPROM file name: yyyy-mm-dd_hh-mm_back.eeprom.
+- TODO : librarian presets updating. 
+- TODO : librarian profiles updating. 
+
+2023-09-24 : v10
+- 1_OSC:xmix type 0xc5 => 0xf2 (new type).
+
+2023-09-02 : v10
+- Command line help & examples new menu item 'h'.
+- Command line examples now use current exe file name.
+- Type 0xf2 removed.
+- New types [0xd0:0xd3], 0xf2 => 0xd2, VOLUME:velo 0x30 => 0xd1.
+
+2023-08-30 : v10
+- New SW load: 0x51046150 (semi-released to FB)
+
 2023-07-21 : v9 - RELEASED as 2023-07-26 - 
-- Backup EEPROM file name: yyyy-mm-dd_backup.eeprom
+- Backup EEPROM file name: yyyy-mm-dd_backup.eeprom.
 
 2023-07-19 : v9
 - New SW load: 0x6be9394f
@@ -165,7 +208,7 @@
 - Build now targets ARM32 & 64 bit Linux OS (32 bit tested on RPI4).
 
 2023-01-31 : v6 - RELEASED -
-- Command morph now has -mo, -mn, -me -mf, -mr scalings, -seed assignment.
+- Command morph now has -mo, -mn, -me, -mf, -mr scalings, -seed assignment.
 - Command slots column width now adapts to file name lengths.
 
 2023-01-29 : v6

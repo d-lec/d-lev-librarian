@@ -37,7 +37,7 @@ knob     hex      label    range    page title
 33       21       rise     0:63     
 34       22       knee     0:31     
 35       23       fall     0:63     
-36       24       velo     0:31     
+36       24       velo     -31:31     
 37       25       damp     0:63     
 38       26       dloc     0:63     
 39       27       -        0:19     
@@ -67,7 +67,7 @@ knob     hex      label    range    page title
 63       3F       0        0:19     
 64       40       vmod     -63:63   0_OSC
 65       41       pmod     -63:63   
-66       42       harm     0:31     
+66       42       harm     -31:31     
 67       43       treb     -31:31   
 68       44       odd      0:31     
 69       45       bass     -31:31   
@@ -79,7 +79,7 @@ knob     hex      label    range    page title
 75       4B       hmul     -127:127 
 76       4C       fm       0:31     
 77       4D       sprd     0:63     
-78       4E       xmix     0:31     
+78       4E       xmix     -31:31     
 79       4F       -        0:19     
 80       50       vmod     -63:63   FLT_OSC
 81       51       pmod     -63:63   
@@ -133,16 +133,16 @@ knob     hex      label    range    page title
 129      81       Drop     0:31     
 130      82       Lin      -15:15   
 131      83       Dith     0:7      
-132      84       Ofs-     0:127    
-133      85       Ofs+     0:127    
+132      84       Ofs-     0:255    
+133      85       Ofs+     0:255    
 134      86       Sens     -127:127 
 135      87       -        0:19     
 136      88       Pcal     -127:127 P_FIELD
 137      89       Lift     0:31     
 138      8A       Lin      -15:15   
 139      8B       Dith     0:7      
-140      8C       Ofs-     0:127    
-141      8D       Ofs+     0:127    
+140      8C       Ofs-     0:255    
+141      8D       Ofs+     0:255    
 142      8E       Sens     -127:127 
 143      8F       -        0:19     
 144      90       LED      0:31     DISPLAY

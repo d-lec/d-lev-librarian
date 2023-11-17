@@ -38,6 +38,7 @@ func main() {
 			case "loop" :loop_cmd()
 			case "acal" : acal_cmd()
 			case "reset" : reset_cmd()
+			case "stats" : stats()
 			case "dev" : dev()  // dev stuff
 			default : error_exit(fmt.Sprint("Unknown command: ", os.Args[1]))
 		}
@@ -73,7 +74,18 @@ func ver() {
 	file := sub.String("f", "", "source `file` name")
 	sub.Parse(os.Args[2:])
 	//
-	ver_cmd(*file, false)
+	ver_cmd(*file, false, false)
+}
+
+// report stats
+func stats() {
+	sub := flag.NewFlagSet("stats", flag.ExitOnError)
+	p_hz := sub.Bool("p", false, "pitch field Hz")
+	v_hz := sub.Bool("v", false, "volume field Hz")
+	h_er := sub.Bool("e", false, "hive errors")
+	sub.Parse(os.Args[2:])
+	//
+	stats_cmd(*p_hz, *v_hz, *h_er)
 }
 
 // view knobs, DLP file, slot
@@ -94,7 +106,7 @@ func knob() {
 	knob := sub.String("k", "", "page:knob[0:6]")
 	ofs := sub.String("o", "", "knob offset `value`")
 	set := sub.String("s", "", "knob set `value`")
-	min := sub.Bool("min", false, "set knob min")
+	min := sub.Bool("min", false, "set knob to min")
 	view := sub.Bool("v", false, "view all knobs")
 	sub.Parse(os.Args[2:])
 	//

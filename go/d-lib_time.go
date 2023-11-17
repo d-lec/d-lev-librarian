@@ -21,10 +21,10 @@ func hms() (string) {
 	return fmt.Sprintf("%02d-%02d-%02d", now.Hour(), now.Minute(), now.Second())
 }
 
-// return date & time string as yyyy-mm-dd_hh_mm_ss
-func date_hms() (string) {
+// return date & time string as yyyy-mm-dd_hh-mm
+func date_hm() (string) {
 	now := time.Now()
-	return fmt.Sprintf("%d-%02d-%02d_%02d-%02d-%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
+	return fmt.Sprintf("%d-%02d-%02d_%02d-%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute())
 }
 
 // return time for use as random seed

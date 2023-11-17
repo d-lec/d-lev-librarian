@@ -65,8 +65,11 @@ func slot_int_chk(slot_str string, pro bool) (int) {
 // print librarian version & help info
 func help_cmd(verbose_f bool) {
 	fmt.Println("= D-LEV LIBRARIAN VERSION", ver_tbl[0].lib, ":", ver_tbl[0].date, "=") 
-	fmt.Print(help_str) 
-	if verbose_f { fmt.Print(help_verbose_str) }  // print verbose help
+	fmt.Print(help_commands_str)
+	if verbose_f { 
+		fmt.Print(help_notes_str)
+		fmt.Print(strings.Replace(help_examples_str, "LIB_EXE", os.Args[0], -1)) 
+	}
 }
 
 // do processor reset
@@ -135,6 +138,63 @@ func installed_ver() (string) {
 	return rx_str
 }
 
+// check hive error reg
+func hive_errors_chk() {
+	err_str := func(err uint64) string {
+		str := ""
+		thd := 0
+		for err != 0 {
+			if err & 0x1 != 0 { str = " " + strconv.Itoa(thd) + str }
+			thd++
+			err >>= 1
+		}
+		return str
+	}
+	//
+	sp := sp_open()
+	rx_str := sp_tx_rx(sp, REG_ERROR + " rr ", false)
+	sp.Close()
+	rx_str = decruft_hcl(rx_str)
+	rx_uint, err := strconv.ParseUint(rx_str, 16, 32)
+	if err != nil { error_exit(fmt.Sprint("Trouble getting errors: ", rx_str)) }
+	if rx_uint == 0 { fmt.Println("> No errors.")
+	} else { 
+		irq_err := (rx_uint >> 24) & 0xff
+		opc_err := (rx_uint >> 16) & 0xff
+		psh_err := (rx_uint >> 8) & 0xff
+		pop_err := rx_uint & 0xff
+		fmt.Println("> -ERRORS!-")
+		if irq_err != 0 { fmt.Print("> IRQ:", err_str(irq_err), "\n") }
+		if opc_err != 0 { fmt.Print("> OPC:", err_str(opc_err), "\n") }
+		if psh_err != 0 { fmt.Print("> PSH:", err_str(psh_err), "\n") }
+		if pop_err != 0 { fmt.Print("> POP:", err_str(pop_err), "\n") }
+	}
+}
+
+// check axis frequency
+func freq_chk(vol_f bool) (uint32) {
+	reg := REG_PITCH
+	if vol_f { reg = REG_VOLUME }
+	sp := sp_open()
+	rx_str := sp_tx_rx(sp, reg + " rr ", false)
+	sp.Close()
+	rx_str = decruft_hcl(rx_str)
+	rx_uint, err := strconv.ParseUint(rx_str, 16, 32)
+	if err != nil { error_exit(fmt.Sprint("Trouble getting frequency: ", rx_str)) }
+	f_clk := 196666666.6666667
+	nco_w := 32
+	f_shl := 7
+	return uint32(float64(rx_uint) * f_clk / float64(uint64(1) << (nco_w + f_shl)))
+}
+
+// return operational stats
+func stats_cmd(p_hz, v_hz, h_er bool) {
+	all_f := !p_hz && !v_hz && !h_er
+	if p_hz || all_f { fmt.Println("> P_FIELD Hz:", freq_chk(false)) }
+	if v_hz || all_f { fmt.Println("> V_FIELD Hz:", freq_chk(true)) }
+	if h_er || all_f { hive_errors_chk() }
+}
+
 // return file crc
 func file_crc_chk(file string) (bool){
 	sw_strs := file_sw_strs(file)
@@ -160,7 +220,7 @@ func file_ver(file string) (string){
 }
 
 // get versions & check stuff
-func ver_cmd(file string, pre_chk bool) (bool) {
+func ver_cmd(file string, pre_chk, pro_chk bool) (bool) {
 	sw_ver := ""
 	sw_crc := false
 	sw_upd := false
@@ -175,7 +235,7 @@ func ver_cmd(file string, pre_chk bool) (bool) {
 	fmt.Println("> Software version:", sw_ver)
 	fmt.Println("> Software date:", sw_date_lookup(sw_ver))
 	switch sw_ver {
-		case ver_tbl[0].sw, ver_tbl[1].sw :
+		case ver_tbl[0].sw :
 			fmt.Println("> Software is CURRENT.") 
 		default :
 			sw_upd = true
@@ -190,13 +250,23 @@ func ver_cmd(file string, pre_chk bool) (bool) {
 	}
 	if pre_chk {
 		switch sw_ver {
-			case ver_tbl[0].sw, ver_tbl[1].sw, ver_tbl[2].sw :
+			case ver_tbl[0].sw :
 				fmt.Println("> Presets should be OK.") 
-			case ver_tbl[3].sw :
+			case ver_tbl[1].sw :
 				fmt.Println("> Presets can be UPDATED with this version of the librarian.") 
 			default :
 				fmt.Println("> Presets cannot be UPDATED using this version of the librarian,") 
-				fmt.Println("> You can REPLACE your presets, or contact Eric for further options.")
+				fmt.Println("> You can REPLACE them, or contact Eric for further options.")
+		}
+	}
+	if pro_chk {
+		switch sw_ver {
+			case ver_tbl[0].sw :
+				fmt.Println("> Profiles should be OK.") 
+			case ver_tbl[1].sw, ver_tbl[2].sw, ver_tbl[3].sw, ver_tbl[4].sw, ver_tbl[5].sw :
+				fmt.Println("> Profiles can be UPDATED with this version of the librarian.") 
+			default :
+				fmt.Println("> Profiles may need manual adjustment.") 
 		}
 	}
 	return sw_upd
@@ -209,23 +279,25 @@ func ports_cmd(port_new string) {
 	port_idx := str_exists(port_list, port)
 	if len(port_list) == 0 {
 		fmt.Println("> No serial ports found!")
+		return
 	} else {
 		fmt.Println("> Available serial ports:")
 		for p_num, p_str := range port_list { fmt.Printf(" [%v] %v\n", p_num, p_str) }
 	}
-	if port_new != "" { 
+	switch {
+	case port_new != "":
 		port_num, err := strconv.Atoi(port_new)
 		if err != nil || port_num < 0 || port_num >= len(port_list) { error_exit(fmt.Sprint("Bad port number: ", port_new)) }
 		port = port_list[port_num]
 		cfg_set("port", port)
 		fmt.Print("> Set port to: [", port_num, "] ", port, "\n")
-	} else if len(os.Args) > 2 { 
+	case len(os.Args) > 2:
 		error_exit("Use the -p flag to set the port")
-	} else if port == "" {
+	case port == "":
 		fmt.Println("> Current port is not assigned!")
-	} else if port_idx < 0 {
+	case port_idx < 0:
 		fmt.Println("> Current port:", port, "doesn't exist!")
-	} else {
+	default: 
 		fmt.Print("> Current port: [", port_idx, "] ", port, "\n")
 	}
 }
@@ -233,46 +305,84 @@ func ports_cmd(port_new string) {
 // view knobs, slot, DLP file, slot in PRE|PRO|EEPROM file
 func view_cmd(file string, pro, knobs bool, slot string, mark int) {
 	mode := "pre"; if pro { mode = "pro" }
-	if knobs {  // view current knobs
+	// flags
+	_k := knobs
+	_s := (slot != "")
+	_f := (file != "")
+	// useful cases:
+	switch {
+	case  _k && !_s && !_f:  // knobs
 		knob_str := sp_rx_knobs_str()
 		fmt.Println(ui_prn_str(knob_ui_strs(knob_str), mark))
 		if mark < 0 { fmt.Println("> knobs") }
-	} else if file != "" || slot != "" {
-		if slot == "" {  // view a *.dlp file
-			file = file_ext_chk(file, ".dlp")
-			file_str := file_read_str(file)
-			fmt.Println(ui_prn_str(pre_ui_strs(file_str, pro), mark))
-			fmt.Println(">", mode, "file", file)
-		} else if file == "" {  // view a slot
-			slot_int := slot_int_chk(slot, pro)
-			slot_str := spi_rd_slot_str(slot_int, pro)
-			fmt.Println(ui_prn_str(pre_ui_strs(slot_str, pro), mark))
-			fmt.Println(">", mode, "slot", slot_int)
-		} else {  // view a slot in a *.pre, *.pro, or *.eeprom file
-			var file_strs []string
-			file_strs, mode = file_dlp_strs(file, mode)
-			if mode == "pro" { pro = true }
-			slot_int := slot_int_chk(slot, pro)
-			fmt.Println(ui_prn_str(pre_ui_strs(file_strs[slot_int], pro), mark))
-			fmt.Println("> file", file, mode, "slot", slot_int)	
-		}
-	} else {
+	case !_k &&  _s && !_f:  // slot
+		slot_int := slot_int_chk(slot, pro)
+		slot_str := spi_rd_slot_str(slot_int, pro)
+		fmt.Println(ui_prn_str(pre_ui_strs(slot_str, pro), mark))
+		fmt.Println(">", mode, "slot", slot)
+	case !_k && !_s &&  _f:  // file
+		file = file_ext_chk(file, ".dlp")
+		file_str := file_read_str(file)
+		fmt.Println(ui_prn_str(pre_ui_strs(file_str, pro), mark))
+		fmt.Println(">", mode, "file", file)
+	case !_k &&  _s &&  _f:  // slot in file
+		var file_strs []string
+		file_strs, mode = file_dlp_strs(file, mode)
+		if mode == "pro" { pro = true }
+		slot_int := slot_int_chk(slot, pro)
+		fmt.Println(ui_prn_str(pre_ui_strs(file_strs[slot_int], pro), mark))
+		fmt.Println(">", mode, "slot", slot, "in file", file )	
+	default:
 		error_exit("Nothing to do")
 	}
 }
 
+// read, set, offset, min one knob or all knobs
 func knob_cmd(knob, ofs, set string, min, view bool) {
-	str_split := (strings.Split(strings.TrimSpace(knob), ":"))
-	pg_name, pg_idx := page_lookup(str_split[0])
-	if pg_idx < 0 { error_exit("Bad page name") }
-	knob_idx := pg_idx * KNOBS  // base index at this point
+	// flags & stuff
+	_kp := false  // knob page=ok 
+	_ki := false  // knob idx=int
+	_ka := false  // knob idx=all
+	page_name := ""
+	page_idx := 0
+	knob_int := 0
 	prn_str := ""
-	if len(str_split) < 2 { 
-		prn_str = fmt.Sprint("> ", pg_name)
+	// process knob string
+	if knob != "" {  
+		kp_str, kia_str, _kia := (strings.Cut(strings.TrimSpace(knob), ":"))
+		page_name, page_idx = page_lookup(kp_str)
+		if page_idx < 0 { error_exit("Bad page name") }
+		_kp = true
+		if _kia {  // knob idx string not empty
+			kia_str = strings.ToLower(strings.TrimSpace(kia_str))
+			if kia_str == "all" {
+				_ka = true 
+			} else {
+				var err error
+				knob_int, err = strconv.Atoi(kia_str); 
+				if err != nil { error_exit("Bad knob index") }
+				if knob_int < 0 || knob_int >= KNOBS-1 { error_exit("Knob index out of range") }
+				_ki = true
+			}
+		}
+	}
+	// base index at this point
+	knob_idx := page_idx * KNOBS
+	// set UI LCD to page
+	set_ui_page := func() {
+		sp := sp_open()
+		sp_tx_rx(sp, strconv.Itoa(PAGE_SEL_KNOB) + " " + strconv.Itoa(page_idx) + " wk ", false)
+		sp.Close()
+	}
+	// useful cases:
+	switch {
+	case _kp && !_ki && !_ka:  // page:(w/ no idx)
+		prn_str = fmt.Sprint("> ", page_name)
 		knob_idx += PAGE_SEL_KNOB  // bracket page name
-	} else if strings.ToLower(strings.TrimSpace(str_split[1])) == "all" {
-		prn_str = fmt.Sprint("> ", pg_name, ":all")
-		if min || set == "0" {
+		set_ui_page()
+	case _kp && _ka:  // page:all
+		prn_str = fmt.Sprint("> ", page_name, ":all")
+		if min {
 			sp := sp_open()
 			for i:=0; i<KNOBS-1; i++ {
 				sp_tx_rx(sp, strconv.Itoa(knob_idx+i) + " 0 wk ", false)
@@ -281,16 +391,15 @@ func knob_cmd(knob, ofs, set string, min, view bool) {
 			prn_str += fmt.Sprint("=>[min]")
 		}
 		knob_idx += PAGE_SEL_KNOB  // bracket page name
-	} else {
-		knob_int, err := strconv.Atoi(str_split[1]); if err != nil { error_exit("Bad knob index") }
-		if knob_int < 0 || knob_int >= KNOBS-1 { error_exit("Knob index out of range") }
+		set_ui_page()
+	case _kp && _ki:  // page:idx
 		knob_idx += knob_int
 		ptype, plabel, _, _ := pname_lookup(knob_pnames[knob_idx])
 		sp := sp_open()
 		rx_str := sp_tx_rx(sp, strconv.Itoa(knob_idx) + " rk ", false)
 		sp.Close()
 		rd_uint32, _ := strconv.ParseUint(decruft_hcl(rx_str), 16, 32)
-		prn_str = fmt.Sprint("> ", pg_name, ":", knob_int, " ", strings.TrimSpace(plabel), "[", strings.TrimSpace(pint_disp(int(rd_uint32), ptype)), "]")
+		prn_str = fmt.Sprint("> ", page_name, ":", knob_int, " ", strings.TrimSpace(plabel), "[", strings.TrimSpace(pint_disp(int(rd_uint32), ptype)), "]")
 		if min || ofs != "" || set != "" {
 			rw_pint := pint_freq(int(rd_uint32), ptype)
 			if set != "" { 
@@ -310,58 +419,92 @@ func knob_cmd(knob, ofs, set string, min, view bool) {
 			sp.Close()
 			prn_str += fmt.Sprint("=>[", strings.TrimSpace(pint_disp(rw_pint, ptype)), "]")
 		}
-	}
-	if view { 
-		// set LCD to edited screen
-		sp := sp_open()
-		sp_tx_rx(sp, strconv.Itoa(PAGE_SEL_KNOB) + " " + strconv.Itoa(pg_idx) + " wk ", false)
+		set_ui_page()
+	case view:
+		sp := sp_open()  // get current page
+		rx_str := sp_tx_rx(sp, strconv.Itoa(PAGE_SEL_KNOB) + " rk ", false)
 		sp.Close()
+		rd_uint32, _ := strconv.ParseUint(decruft_hcl(rx_str), 16, 32)
+		knob_idx = int(rd_uint32) * KNOBS + PAGE_SEL_KNOB
+		prn_str = "> " + strings.TrimSpace(page_names[knob_idx / 8])
+	default:
+		error_exit("Nothing to do")
+	}
+	if view {
 		view_cmd("", false, true, "", knob_idx) 
 	}
 	fmt.Println(prn_str)
 }
 
+
 // diff DLP file(s) / slot(s) / knobs
 func diff_cmd(file, file2 string, pro, knobs bool, slot, slot2 string) {
-	mode := "pre"; if pro { mode = "pro" }
-	if file != "" {  // compare to a *.dlp file
-		file = file_ext_chk(file, ".dlp")
-		file_str := file_read_str(file)
-		if knobs {  // file vs. knobs
-			knob_str := knob_pre_str(sp_rx_knobs_str(), pro)
-			fmt.Println(diff_prn_str(diff_pres(file_str, knob_str, pro)))
-			fmt.Println(">", mode, "file", file, "vs. knobs" )
-		} else if file2 != "" {  // file vs. file2
-			file2 = file_ext_chk(file2, ".dlp")
-			file2_str := file_read_str(file2)
-			fmt.Println(diff_prn_str(diff_pres(file_str, file2_str, pro)))
-			fmt.Println(">", mode, "file", file, "vs.", file2 )
-		} else if slot != "" {  // file vs. slot
-			slot_int := slot_int_chk(slot, pro)
-			slot_str := spi_rd_slot_str(slot_int, pro)
-			fmt.Println(diff_prn_str(diff_pres(file_str, slot_str, pro)))
-			fmt.Println(">", mode, "file", file, "vs. slot", slot )
-		} else {
-			error_exit("Nothing to do")
-		}
-	} else if slot != "" {  // compare to a slot
-		slot_int := slot_int_chk(slot, pro)
-		slot_str := spi_rd_slot_str(slot_int, pro)
-		if knobs {  // slot vs. knobs
-			knob_str := knob_pre_str(sp_rx_knobs_str(), pro)
-			fmt.Println(diff_prn_str(diff_pres(slot_str, knob_str, pro)))
-			fmt.Println(">", mode, "slot", slot, "vs. knobs" )
-		} else if slot2 != "" {  // slot vs. slot2
-			slot2_int := slot_int_chk(slot2, pro)
-			slot2_str := spi_rd_slot_str(slot2_int, pro)
-			fmt.Println(diff_prn_str(diff_pres(slot_str, slot2_str, pro)))
-			fmt.Println(">", mode, "slot", slot, "vs. slot", slot2 )
-		} else {
-			error_exit("Nothing to do")
-		}
-	} else {
-		error_exit("Nothing to do")
+	// flags
+	_f := (file != "")
+	_s := (slot != "")
+	_f2 := (file2 != "")
+	_s2 := (slot2 != "")
+	_k := knobs
+	// useful cases:
+	base := ""
+	comp := ""
+	switch {
+	case  _f && !_s && !_f2 && !_s2 &&  _k: base = "f";  comp = "k"     // DLP vs. knobs
+	case  _f &&  _s && !_f2 && !_s2 && !_k: base = "f";  comp = "s"     // DLP vs. slot
+	case  _f && !_s &&  _f2 && !_s2 && !_k: base = "f";  comp = "f2"    // DLP vs. DLP
+	case  _f && !_s &&  _f2 &&  _s2 && !_k: base = "f";  comp = "f2s2"  // DLP vs. PRE|PRO|EEPROM slot
+	case  _f &&  _s && !_f2 && !_s2 &&  _k: base = "fs"; comp = "k"     // PRE|PRO|EEPROM slot vs. knobs
+	case  _f &&  _s && !_f2 &&  _s2 && !_k: base = "fs"; comp = "s2"    // PRE|PRO|EEPROM slot vs. slot
+	case  _f &&  _s &&  _f2 && !_s2 && !_k: base = "fs"; comp = "f2"    // PRE|PRO|EEPROM slot vs. DLP
+	case  _f &&  _s &&  _f2 &&  _s2 && !_k: base = "fs"; comp = "f2s2"  // PRE|PRO|EEPROM slot vs. PRE|PRO|EEPROM slot
+	case !_f &&  _s && !_f2 && !_s2 &&  _k: base = "s";  comp = "k"     // slot vs. knobs
+	case !_f &&  _s && !_f2 &&  _s2 && !_k: base = "s";  comp = "s2"    // slot vs. slot
+	case !_f &&  _s &&  _f2 &&  _s2 && !_k: base = "s";  comp = "f2s2"  // slot vs. PRE|PRO|EEPROM slot
+	case !_f && !_s &&  _f2 && !_s2 &&  _k: base = "k";  comp = "f2"    // knobs vs. DLP
+	case !_f && !_s && !_f2 &&  _s2 &&  _k: base = "k";  comp = "s2"    // knobs vs. slot
+	case !_f && !_s &&  _f2 &&  _s2 &&  _k: base = "k";  comp = "f2s2"  // knobs vs. PRE|PRO|EEPROM slot
+	default: error_exit("Nothing to do")
 	}
+	// giant helper function	
+	get_str := func(key string) (string, string) {
+		mode := "pre"; if pro { mode = "pro" }  // mode
+		// cases:
+		switch {
+		case key == "k":
+			return knob_pre_str(sp_rx_knobs_str(), pro), "knobs"
+		case key == "f":
+			file = file_ext_chk(file, ".dlp")
+			return file_read_str(file), mode + " file " + file
+		case key == "f2":
+			file2 = file_ext_chk(file2, ".dlp")
+			return file_read_str(file2), mode + " file " + file2
+		case key == "s":
+			slot_int := slot_int_chk(slot, pro)
+			return spi_rd_slot_str(slot_int, pro), mode + " slot " + slot
+		case key == "s2":
+			slot2_int := slot_int_chk(slot2, pro)
+			return spi_rd_slot_str(slot2_int, pro), mode + " slot " + slot2
+		case key == "fs":
+			var file_strs []string
+			file_strs, mode = file_dlp_strs(file, mode)
+			if mode == "pro" { pro = true }
+			slot_int := slot_int_chk(slot, pro)
+			return file_strs[slot_int], mode + " slot " + slot + " in file " + file
+		case key == "f2s2":
+			var file_strs []string
+			file_strs, mode = file_dlp_strs(file2, mode)
+			if mode == "pro" { pro = true }
+			slot_int := slot_int_chk(slot2, pro)
+			return file_strs[slot_int], mode + " slot " + slot2 + " in file " + file2
+		default:
+			error_exit("Internal error")  // can't happen
+		}
+		return "Internal error", ""  // bogus
+	}
+	base_str, base_prn_str := get_str(base)
+	comp_str, comp_prn_str := get_str(comp)
+	fmt.Println(diff_prn_str(diff_pres(base_str, comp_str, pro)))
+	fmt.Println(">", base_prn_str, "-VS-", comp_prn_str )
 }
 
 // match slots | DLP files in dir2 | "slots" in PRE|PRO|EEPROM file w/ DLP files in dir, list
@@ -370,26 +513,32 @@ func match_cmd(dir, dir2, file string, pro, hdr, guess, slots bool) {
 	name_strs, data_strs := dir_read_strs(dir, ".dlp")
 	mode := "pre"; if pro { mode = "pro" }
 	if len(data_strs) == 0 { error_exit(fmt.Sprint("No ", mode, " files in directory ", dir)) }
-	if slots {
+	// flags
+	_s := slots
+	_f := (file != "")
+	_d2 := (dir2 != "")
+	// useful cases:
+	switch {
+	case  _s && !_f && !_d2:  // slots
 		slots_strs := spi_rd_slots_strs(pro)
 		fmt.Print(slots_prn_str(comp_file_data(slots_strs, name_strs, data_strs, pro, guess), pro, hdr))
-		fmt.Println("> matched", mode, "slots to", mode, "files in", dir)
-	} else if file != "" {
+		fmt.Print("> ", mode, " slots")
+	case !_s &&  _f && !_d2: // file
 		file_chk(file)
 		var file_strs []string
 		file_strs, mode = file_dlp_strs(file, mode)
 		if mode == "pro" { pro = true }
 		fmt.Print(slots_prn_str(comp_file_data(file_strs, name_strs, data_strs, pro, guess), pro, hdr))
-		fmt.Println("> matched file", file, "to", mode, "files in", dir)
-	} else if dir2 != "" {
+		fmt.Print("> ", mode, " slots in file ", file)
+	case !_s && !_f &&  _d2: // dir2
 		dir_chk(dir2)
 		name2_strs, data2_strs := dir_read_strs(dir2, ".dlp")
 		if len(data2_strs) == 0 { error_exit(fmt.Sprint("No ", mode, " files in ", dir2)) }
 		fmt.Print(files_prn_str(name2_strs, comp_file_data(data2_strs, name_strs, data_strs, pro, guess)))
-		fmt.Println("> matched", mode, "files in", dir2, "to", mode, "files in", dir)
-	} else {
-		error_exit("Nothing to do")
+		fmt.Print("> ", mode, " files in ", dir2)
+	default: error_exit("Nothing to do")
 	}
+	fmt.Println(" -MATCHED- to", mode, "files in", dir)
 }
 
 // download to file
@@ -456,7 +605,7 @@ func pump_cmd(file, slot string, knobs, pro bool) {
 		addr, _ := spi_bulk_addrs(ext)
 		spi_wr(addr, file_str, true)
 		fmt.Println("> pumped from", file)
-		if ext == ".spi" || ext == ".eeprom" { reset_cmd() }
+		if ext == ".spi" || ext == ".eeprom" || ext == ".pro" { reset_cmd() }
 	}
 }
 
@@ -484,32 +633,32 @@ func split_cmd(file string, yes bool) {
 	base = strings.TrimSuffix(base, ext)
 	file_str := file_read_str(file)
 	switch ext {
-		case ".eeprom" :
-			pre_str, pro_str, spi_str := split_eeprom_str(file_str)
-			pre_file := base + ".pre"
-			pro_file := base + ".pro"
-			spi_file := base + ".spi"
-			pre_path := filepath.Join(dir, pre_file)
-			pro_path := filepath.Join(dir, pro_file)
-			spi_path := filepath.Join(dir, spi_file)
-			wr_f := false
-			prn_str := ""
-			if file_write_str(pre_path, pre_str, yes) { prn_str += " " + pre_file; wr_f = true }
-			if file_write_str(pro_path, pro_str, yes) { prn_str += " " + pro_file; wr_f = true }
-			if file_write_str(spi_path, spi_str, yes) { prn_str += " " + spi_file; wr_f = true }
-			if wr_f { fmt.Print("> split ", file, " =>", prn_str, "\n") }
-		case ".pre", ".pro" :
-			files := 0
-			dlp_strs := split_pre_pro_str(file_str)
-			for file_num, dlp_str := range dlp_strs {
-				dlp_name := fmt.Sprintf("%03d", file_num) + ".dlp"
-				if ext == ".pro" { dlp_name = "pro_" + dlp_name }
-				dlp_file := filepath.Join(dir, dlp_name)
-				if file_write_str(dlp_file, dlp_str, yes) { files++ }
-			}
-			fmt.Println("> split", file, "=>", files, "numbered DLP files" )
-		case "" : error_exit(fmt.Sprint("Missing file extension"))
-		default : error_exit(fmt.Sprint("Wrong file extension: ", ext))
+	case ".eeprom" :
+		pre_str, pro_str, spi_str := split_eeprom_str(file_str)
+		pre_file := base + ".pre"
+		pro_file := base + ".pro"
+		spi_file := base + ".spi"
+		pre_path := filepath.Join(dir, pre_file)
+		pro_path := filepath.Join(dir, pro_file)
+		spi_path := filepath.Join(dir, spi_file)
+		wr_f := false
+		prn_str := ""
+		if file_write_str(pre_path, pre_str, yes) { prn_str += " " + pre_file; wr_f = true }
+		if file_write_str(pro_path, pro_str, yes) { prn_str += " " + pro_file; wr_f = true }
+		if file_write_str(spi_path, spi_str, yes) { prn_str += " " + spi_file; wr_f = true }
+		if wr_f { fmt.Print("> split ", file, " =>", prn_str, "\n") }
+	case ".pre", ".pro" :
+		files := 0
+		dlp_strs := split_pre_pro_str(file_str)
+		for file_num, dlp_str := range dlp_strs {
+			dlp_name := fmt.Sprintf("%03d", file_num) + ".dlp"
+			if ext == ".pro" { dlp_name = "pro_" + dlp_name }
+			dlp_file := filepath.Join(dir, dlp_name)
+			if file_write_str(dlp_file, dlp_str, yes) { files++ }
+		}
+		fmt.Println("> split", file, "=>", files, "numbered DLP files" )
+	case "" : error_exit(fmt.Sprint("Missing file extension"))
+	default : error_exit(fmt.Sprint("Wrong file extension: ", ext))
 	}
 }
 
@@ -520,36 +669,36 @@ func join_cmd(file string, yes bool) {
 	dir, base := filepath.Split(file)
 	base = strings.TrimSuffix(base, ext)
 	switch ext {
-		case ".eeprom" :
-			base_path := filepath.Join(dir, base)
-			pre_path := base_path + ".pre"
-			pre_str := file_read_str(pre_path)
-			pro_path := base_path + ".pro"
-			pro_str := file_read_str(pro_path)
-			spi_path := base_path + ".spi"
-			spi_str := file_read_str(spi_path)
-			file_str := pre_str + "\n"
-			file_str += pro_str + "\n"
-			file_str += spi_str
-			if file_write_str(file, file_str, yes) {
-				fmt.Println("> joined", pre_path, pro_path, spi_path, "=>", file )
-			}
-		case ".pre", ".pro" :
-			file_str := ""
-			files := PRE_SLOTS
-			if ext == ".pro" { files = PRO_SLOTS }
-			for file_num := 0; file_num < files; file_num++ {
-				dlp_name := fmt.Sprintf("%03d", file_num) + ".dlp"
-				if ext == ".pro" { dlp_name = "pro_" + dlp_name }
-				dlp_path := filepath.Join(dir, dlp_name)
-				dlp_str := file_read_str(dlp_path)
-				file_str += dlp_str + "\n"
-			}
-			if file_write_str(file, file_str, yes) {
-				fmt.Println("> joined", files, "numbered DLP files", "=>", file)
-			}
-		case "" : error_exit(fmt.Sprint("Missing file extension"))
-		default : error_exit(fmt.Sprint("Wrong file extension: ", ext))
+	case ".eeprom" :
+		base_path := filepath.Join(dir, base)
+		pre_path := base_path + ".pre"
+		pre_str := file_read_str(pre_path)
+		pro_path := base_path + ".pro"
+		pro_str := file_read_str(pro_path)
+		spi_path := base_path + ".spi"
+		spi_str := file_read_str(spi_path)
+		file_str := pre_str + "\n"
+		file_str += pro_str + "\n"
+		file_str += spi_str
+		if file_write_str(file, file_str, yes) {
+			fmt.Println("> joined", pre_path, pro_path, spi_path, "=>", file )
+		}
+	case ".pre", ".pro" :
+		file_str := ""
+		files := PRE_SLOTS
+		if ext == ".pro" { files = PRO_SLOTS }
+		for file_num := 0; file_num < files; file_num++ {
+			dlp_name := fmt.Sprintf("%03d", file_num) + ".dlp"
+			if ext == ".pro" { dlp_name = "pro_" + dlp_name }
+			dlp_path := filepath.Join(dir, dlp_name)
+			dlp_str := file_read_str(dlp_path)
+			file_str += dlp_str + "\n"
+		}
+		if file_write_str(file, file_str, yes) {
+			fmt.Println("> joined", files, "numbered DLP files", "=>", file)
+		}
+	case "" : error_exit(fmt.Sprint("Missing file extension"))
+	default : error_exit(fmt.Sprint("Wrong file extension: ", ext))
 	}
 }
 
@@ -557,22 +706,27 @@ func morph_cmd(file string, knobs bool, slot string, seed int, mo, mn, me, mf, m
 	rand.Seed(int64(seed))
 	prn_str := ""
 	var pints []int
-	if mo | mn | me | mf | mr == 0 {
-		error_exit("Nothing to do")
-	} else if knobs {  // morph current knobs
+	// flags
+	_k := knobs
+	_s := (slot != "")
+	_f := (file != "")
+	_m := (mo | mn | me | mf | mr != 0)
+	// useful cases:
+	switch {
+	case  _k && !_s && !_f && _m:  // knobs
 		pints = pints_signed(sp_rx_knobs_pints("pre"), false)
 		prn_str = fmt.Sprint("> morphed knobs")
-	} else if file != "" {  // morph a *.dlp file
-		file = file_ext_chk(file, ".dlp")
-		file_str := file_read_str(file)
-		pints = pints_signed(hexs_to_ints(file_str, 4), false)
-		prn_str = fmt.Sprint("> morphed file ", file)
-	} else if slot != "" {  // morph a slot
+	case !_k &&  _s && !_f && _m:  // slot
 		slot_int := slot_int_chk(slot, false)
 		slot_str := spi_rd_slot_str(slot_int, false)
 		pints = pints_signed(hexs_to_ints(slot_str, 4), false)
 		prn_str = fmt.Sprint("> morphed slot ", slot_int)
-	} else {
+	case !_k && !_s &&  _f && _m:  // file
+		file = file_ext_chk(file, ".dlp")
+		file_str := file_read_str(file)
+		pints = pints_signed(hexs_to_ints(file_str, 4), false)
+		prn_str = fmt.Sprint("> morphed file ", file)
+	default: 
 		error_exit("Nothing to do")
 	}
 	prn_str += fmt.Sprint(" (-i=", seed, ")")
@@ -586,6 +740,7 @@ func menu_cmd(dir_work string) {
 	path_exe, err := os.Executable(); err_chk(err)
 	dir_exe := filepath.Dir(path_exe)
 	dir_all := filepath.Join(dir_exe, PRESETS_DIR)
+	dir_work_pro := filepath.Join(dir_work, PRO_DIR)
 	//
 	file_spi := filepath.Join(PRESETS_DIR, ver_tbl[0].date + ".spi")
 	file_factory := filepath.Join(PRESETS_DIR, ver_tbl[0].date + ".eeprom")
@@ -600,48 +755,38 @@ func menu_cmd(dir_work string) {
 	path_pre_dl := filepath.Join(dir_work, "download.pre")
 	path_pre_ul := filepath.Join(dir_work, "upload.pre")
 	//
+	path_pro_dl := filepath.Join(dir_work_pro, "download.pro")
+	path_pro_ul := filepath.Join(dir_work_pro, "upload.pro")
+	//
 	first_f := true
 	for {
 		if !first_f {
 			user_input("Press <ENTER> to return to the MENU", true)
 		}
 		first_f = false
-		fmt.Println()
-		fmt.Println()
+		fmt.Println("\n")  // 2 blank lines
 		fmt.Println(" ---------------------------------")
-		fmt.Println(" |  D-LEV LIBRARIAN - VERSION", ver_tbl[0].lib, " |")
+		fmt.Println(" | D-LEV LIBRARIAN - VERSION", ver_tbl[0].lib, " |")
 		fmt.Println(" | SOFTWARE & PRESET UPDATE MENU |")
 		fmt.Println(" ---------------------------------")
 		fmt.Println("  0. README!")
 		fmt.Println("  1. Serial port setup & check.")
 		fmt.Println("  2. Backup your system to an EEPROM file.")
 		fmt.Println("  3. Check & update the D-Lev software.")
-		fmt.Println("  4. Download all D-Lev presets to the", dir_work, "directory.")
-		fmt.Println("  5. Update all presets in the", dir_work, "directory.")
-		fmt.Println("  6. Upload all D-Lev presets from the", dir_work, "directory.")
+		fmt.Println("  4. Download all D-Lev presets & profiles to the", dir_work, "directory.")
+		fmt.Println("  5. Update all presets & profiles in the", dir_work, "directory.")
+		fmt.Println("  6. Upload all D-Lev presets & profiles from the", dir_work, "directory.")
 		fmt.Println("  7. Upload the latest new presets.")
 		fmt.Println("  8. Convert all presets in the", dir_work, "directory to MONO.")
 		fmt.Println("  9. Overwrite all D-Lev preset slots with presets from the", PRESETS_DIR, "directory.")
 		fmt.Println(" 10. Factory Reset: Overwrite EVERYTHING with the latest factory EEPROM file.")
+		fmt.Println("  h. List of commands.")
+		fmt.Println(" hv. List of commands with notes and typical examples of their use.")
 		menu_sel := user_input("Please select a MENU option", true)
 		switch menu_sel {
 			case "0" :
 				fmt.Println()
-				fmt.Println()
-				fmt.Println(" ////////////")
-				fmt.Println(" // README //")
-				fmt.Println(" ////////////")
-				fmt.Println(" - To UPDATE the software and UPDATE ALL of the preset SLOTS: Do 1 thru 7.")
-				fmt.Println(" - To UPDATE the software and OVERWRITE ALL of the preset SLOTS: Do 1 thru 3, then 9.")
-				fmt.Println(" - TO UPDATE & OVERWRITE ABSOLUTELY EVERYTHING INCLUDING PROFILE SLOTS: Do 1, 2, 10.")
-				fmt.Println(" - To CONVERT ALL of the preset SLOTS to MONO: Do 1, 2, 4, 8, 6.")
-				fmt.Println(" - If you run into trouble, quit and pump the backup EEPROM file created in step 2.")
-				fmt.Println(" - Valid prompt responses: y=yes, ENTER=no, q=quit the program.")
-				fmt.Println(" - If unresponsive, do a CTRL-C (hold down the CONTROL key and press the C key).")
-				fmt.Println(" - DO NOT turn or press any D-Lev knobs during the upload / download process!")
-				fmt.Println(" ////////////")
-				fmt.Println(" // README //")
-				fmt.Println(" ////////////")
+				fmt.Print(menu_readme_str)
 			case "1" :
 				fmt.Println()
 				ports_cmd("")
@@ -659,18 +804,18 @@ func menu_cmd(dir_work string) {
 					fmt.Println("> Port seems to be OK!")
 				}
 			case "2" :
-				file_backup := date() + "_backup.eeprom"
+				file_backup := date_hm() + "_back.eeprom"
 				if user_prompt("Do you want to BACKUP your ENTIRE D-Lev to the FILE: " + file_backup + "?", false, true) {
 					dump_cmd(file_backup, "", false, false, false)
 				}
 			case "3" :
 				fmt.Println()
-				sw_upd := ver_cmd("", true)
+				sw_upd := ver_cmd("", true, true)
 				if (sw_upd)  {
 					if user_prompt("Do you want to UPDATE your D-Lev SOFTWARE with the FILE: "+ file_spi + "?", false, true) {
 						pump_cmd(path_spi, "", false, false)
 						fmt.Println()
-						ver_cmd("", false)
+						ver_cmd("", false, false)
 					}
 				}
 			case "4" :
@@ -678,14 +823,25 @@ func menu_cmd(dir_work string) {
 					dump_cmd(path_pre_dl, "", false, false, true)
 					split_cmd(path_pre_dl, true)
 				}
+				if user_prompt("Do you want to DOWNLOAD your D-Lev profiles to " + dir_work_pro +"?", false, true) {
+					dump_cmd(path_pro_dl, "", false, true, true)
+					split_cmd(path_pro_dl, true)
+				}
 			case "5" :
 				if user_prompt("Do you want to UPDATE the presets in " + dir_work + "?", false, true) {
 					process_dlps(dir_work, dir_work, false, false, true, false, true)
+				}
+				if user_prompt("Do you want to UPDATE the profiles in " + dir_work_pro + "?", false, true) {
+					process_dlps(dir_work_pro, dir_work_pro, true, false, true, false, true)
 				}
 			case "6" :
 				if user_prompt("Do you want to UPLOAD the presets in "+ dir_work + "?", false, true) {
 					join_cmd(path_pre_ul, true)
 					pump_cmd(path_pre_ul, "", false, false)
+				}
+				if user_prompt("Do you want to UPLOAD the profiles in "+ dir_work_pro + "?", false, true) {
+					join_cmd(path_pro_ul, true)
+					pump_cmd(path_pro_ul, "", false, true)
 				}
 			case "7" :
 				fmt.Println("> Here is a LIST of the latest NEW presets:")
@@ -720,8 +876,14 @@ func menu_cmd(dir_work string) {
 				if user_prompt("Do you want to OVERWRITE ABSOLUTELY EVERYTHING in your D-Lev with the latest EEPROM file?", false, true) {
 					pump_cmd(path_factory, "", false, false)
 					fmt.Println()
-					ver_cmd("", false)
+					ver_cmd("", false, false)
 				}
+			case "h" :
+				fmt.Println()
+				help_cmd(false)
+			case "hv" :
+				fmt.Println()
+				help_cmd(true)
 			case "" :
 				// do nothing
 			default:

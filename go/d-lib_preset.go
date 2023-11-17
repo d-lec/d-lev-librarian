@@ -29,16 +29,16 @@ var pro_params = []param_t {
 	{0x24, "LCD ",    "s_p5_ds"},	// 5
 	{0xcb, "Pcal",    "p_p0_ds"},	// 6
 	{0xc0, "Lin ",    "p_p1_ds"},	// 7
-	{0x26, "Ofs-",    "p_p2_ds"},	// 8
+	{0x27, "Ofs-",    "p_p2_ds"},	// 8
 	{0xcb, "Sens",    "p_p3_ds"},	// 9	
-	{0x26, "Ofs+",    "p_p4_ds"},	// 10
+	{0x27, "Ofs+",    "p_p4_ds"},	// 10
 	{0xfd, "Cent",    "p_p5_ds"},	// 11
 	{0xcb, "Vcal",    "v_p0_ds"},	// 12
 	{0xc0, "Lin ",    "v_p1_ds"},	// 13
-	{0x26, "Ofs-",    "v_p2_ds"},	// 14
+	{0x27, "Ofs-",    "v_p2_ds"},	// 14
 	{0xcb, "Sens",    "v_p3_ds"},	// 15
 	{0x24, "Drop",    "v_p4_ds"},	// 16
-	{0x26, "Ofs+",    "v_p5_ds"},	// 17
+	{0x27, "Ofs+",    "v_p5_ds"},	// 17
 	{0x31, "Mon ",    "v_p6_ds"},	// 18
 	{0x01, "Out ",    "v_p7_ds"},	// 19
 	{0x20, "LED ",    "t_p0_ds"},	// 20
@@ -68,12 +68,12 @@ var pre_params = []param_t {
 	// oscillators:
 	{0x31, "osc ",  "o_p0_ds"},	// 0
 	{0x24, "odd ",  "o_p1_ds"},	// 1
-	{0x24, "harm",  "o_p2_ds"},	// 2
+	{0xcd, "harm",  "o_p2_ds"},	// 2
 	{0xca, "pmod",  "o_p3_ds"},	// 3
 	{0xca, "vmod",  "o_p4_ds"},	// 4
 	{0xa7, "oct ",  "o_p5_ds"},	// 5
 	{0xf0, "offs",  "o_p6_ds"},	// 6
-	{0x24, "xmix",  "o_p7_ds"},	// 7
+	{0xcd, "xmix",  "o_p7_ds"},	// 7
 	{0x24, "fm  ",  "o_p8_ds"},	// 8
 	{0x70, "freq",  "o_p9_ds"},	// 9
 	{0x76, "reso", "o_p10_ds"},	// 10
@@ -107,15 +107,15 @@ var pre_params = []param_t {
 	{0x72, "freq",  "r_p2_ds"},	// 36
 	{0xc6, "tap ",  "r_p3_ds"},	// 37
 	{0x71, "hpf ",  "r_p4_ds"},	// 38
-	{0xc5, "xmix",  "r_p5_ds"},	// 39
+	{0xcd, "xmix",  "r_p5_ds"},	// 39
 	{0xa2, "mode",  "r_p6_ds"},	// 40
 	// formants:
 	{0x70, "freq",  "f_p0_ds"},	// 41
-	{0xf2, "levl",  "f_p1_ds"},	// 42
+	{0xd2, "levl",  "f_p1_ds"},	// 42
 	{0x70, "freq",  "f_p2_ds"},	// 43
-	{0xf2, "levl",  "f_p3_ds"},	// 44
+	{0xd2, "levl",  "f_p3_ds"},	// 44
 	{0x70, "freq",  "f_p4_ds"},	// 45
-	{0xf2, "levl",  "f_p5_ds"},	// 46
+	{0xd2, "levl",  "f_p5_ds"},	// 46
 	{0xca, "pmod",  "f_p6_ds"},	// 47
 	{0xca, "vmod",  "f_p7_ds"},	// 48
 	{0xca, "pmod",  "f_p8_ds"},	// 49
@@ -125,16 +125,16 @@ var pre_params = []param_t {
 	{0x76, "reso", "f_p12_ds"},	// 53
 	{0x76, "reso", "f_p13_ds"},	// 54
 	{0x70, "freq", "f_p14_ds"},	// 55
-	{0xf2, "levl", "f_p15_ds"},	// 56
+	{0xd2, "levl", "f_p15_ds"},	// 56
 	{0x70, "freq", "f_p16_ds"},	// 57
-	{0xf2, "levl", "f_p17_ds"},	// 58
+	{0xd2, "levl", "f_p17_ds"},	// 58
 	{0x70, "freq", "f_p18_ds"},	// 59
-	{0xf2, "levl", "f_p19_ds"},	// 60
+	{0xd2, "levl", "f_p19_ds"},	// 60
 	{0x76, "reso", "f_p20_ds"},	// 61
 	{0x70, "freq", "f_p22_ds"},	// 62
-	{0xf2, "levl", "f_p23_ds"},	// 63
+	{0xd2, "levl", "f_p23_ds"},	// 63
 	{0x70, "freq", "f_p24_ds"},	// 64
-	{0xf2, "levl", "f_p25_ds"},	// 65
+	{0xd2, "levl", "f_p25_ds"},	// 65
 	{0xca, "pmod", "f_p26_ds"},	// 66
 	{0xca, "vmod", "f_p27_ds"},	// 67
 	{0x76, "reso", "f_p28_ds"},	// 68
@@ -149,7 +149,7 @@ var pre_params = []param_t {
 	{0x44, "knee",  "e_p1_ds"},	// 75
 	{0x76, "fall",  "e_p2_ds"},	// 76
 	{0x75, "rise",  "e_p3_ds"},	// 77
-	{0x30, "velo",  "e_p4_ds"},	// 78
+	{0xd1, "velo",  "e_p4_ds"},	// 78
 	{0x73, "damp",  "e_p5_ds"},	// 79
 	{0x25, "dloc",  "e_p6_ds"},	// 80
 	// pitch preview:
@@ -247,7 +247,7 @@ func ptype_max(ptype int) int {
 			max = (1 << ((ptype & 0x3) + 4)) - 1
 		case ptype == 0xf0 :
 			max = 127
-		case ptype < 0xf3 :
+		case ptype == 0xf1 :
 			max = 63
 		case ptype == 0xfc :
 			max = 31
@@ -409,14 +409,17 @@ func knob_lookup(pidx int, pro bool) (int, bool) {
 	return 0, false
 }
 
-// given partial page str, return idx, flg
+// given partial page str, return name & idx
+// gotcha: for ""  HasPrefix always returns true!
 func page_lookup(page string) (string, int) {
-	page = strings.ToUpper(page)
-	for idx, name := range page_names {
-		name = strings.TrimSpace(name)
-		if strings.HasPrefix(name, page) { return name, idx }
+	if page != "" {
+		page = strings.ToUpper(page)
+		for idx, name := range page_names {
+			name = strings.TrimSpace(name)
+			if strings.HasPrefix(name, page) { return name, idx }
+		}
 	}
-	return "", -1
+	return "", -1  // default
 }
 
 // put knob ints in preset / slot order
@@ -788,21 +791,15 @@ func morph_pints(pints []int, mo, mn, me, mf, mr int) ([]int) {
 // update //
 ////////////
 
-// reso rescaling for 82db_dn_rev to 96db_rev
-func reso_rescale(reso int) (int) {
-	switch {
-		case reso < 3 : return reso + 1
-		case reso < 12 : return reso
-		case reso < 20 : return reso - 1
-		case reso < 28 : return reso - 2
-		case reso < 37 : return reso - 3
-		case reso < 57 : return reso - 4
-		case reso < 59 : return reso - 3
-		case reso == 59 : return reso - 2
-		case reso == 60 : return reso - 1
-		case reso < 63 : return reso + 1
-		default : return reso
-	}
+// osc xmix rescaling (v9=>v10)
+func osc_xmix_rescale(xmix int) (int) {
+	xmix_f := float64(xmix) / 32
+	if xmix < 0 { xmix_f *= -1 }  // |xmix|
+	xmix_bf := 1 - xmix_f
+	old_f := (xmix_bf / 2) + (xmix_bf * xmix_bf / 2)
+	new_i := int(math.Round((1 - old_f) * 32))
+	if xmix < 0 { new_i *= -1 }  // restore sign
+	return new_i
 }
 
 
@@ -814,7 +811,7 @@ func process_dlps(dir, dir2 string, pro, mono, update, robs, yes bool) {
 	if dir == dir2 { 
 		if !user_prompt("Overwrite DLP files in SOURCE directory " + dir + "?", yes, false) { return }
 	} else if path_exists(dir2) { 
-		if !user_prompt("Overwrite DLP files in DESTINATION directory " + dir2 + "?", yes, false)  { return }
+		if !user_prompt("Overwrite any DLP files in DESTINATION directory " + dir2 + "?", yes, false)  { return }
 	}
 	files, err := os.ReadDir(dir); err_chk(err)
 	upd_cnt := 0
@@ -854,6 +851,55 @@ func process_dlps(dir, dir2 string, pro, mono, update, robs, yes bool) {
 					fmt.Println("- fluffs zeroed:", nz_cnt)
 					upd_f = true 
 				}
+				if update {
+					///////////////////////
+					// 2023-10-02 update //
+					///////////////////////
+					/////////////////////
+					// update profiles //
+					/////////////////////
+					p_dith := pints[1]
+					v_dith := pints[4]
+					v_drop := pints[16]
+					p_ofsm := pints[8]
+					p_ofsp := pints[10]
+					v_ofsm := pints[14]
+					v_ofsp := pints[17]
+					//
+					p_dith_new := 2
+					v_dith_new := 2
+					v_drop_new := 16
+					p_ofsm_new := p_ofsm * 2
+					p_ofsp_new := p_ofsp * 2
+					v_ofsm_new := v_ofsm * 2
+					v_ofsp_new := v_ofsp * 2
+					//
+					if p_dith != p_dith_new {
+						pints[1] = p_dith_new
+						fmt.Println("- P_FIELD:Dith", p_dith, "=>", p_dith_new) 
+						upd_f = true
+					}
+					if v_dith != v_dith_new {
+						pints[4] = v_dith_new
+						fmt.Println("- V_FIELD:Dith", v_dith, "=>", v_dith_new) 
+						upd_f = true
+					}
+					if v_drop != v_drop_new {
+						pints[16] = v_drop_new
+						fmt.Println("- V_FIELD:Drop", v_drop, "=>", v_drop_new) 
+						upd_f = true
+					}
+					pints[8] = p_ofsm_new
+					pints[10] = p_ofsp_new
+					pints[14] = v_ofsm_new
+					pints[17] = v_ofsp_new
+					//
+					fmt.Println("- P_FIELD:Ofs-", p_ofsm, "=>", p_ofsm_new) 
+					fmt.Println("- P_FIELD:Ofs+", p_ofsp, "=>", p_ofsp_new) 
+					fmt.Println("- V_FIELD:Ofs-", v_ofsm, "=>", v_ofsm_new) 
+					fmt.Println("- V_FIELD:Ofs+", v_ofsp, "=>", v_ofsp_new) 
+					upd_f = true
+				}
 			/////////////
 			// PRESETS //
 			/////////////
@@ -874,6 +920,48 @@ func process_dlps(dir, dir2 string, pro, mono, update, robs, yes bool) {
 					fmt.Println("- fluffs zeroed:", nz_cnt)
 					upd_f = true 
 				} 
+				if update {
+					///////////////////////
+					// 2023-10-02 update //
+					///////////////////////
+					/////////////////////
+					// update osc xmix //
+					/////////////////////
+					xmix := pints[7]
+					xmix_new := osc_xmix_rescale(xmix)
+					if xmix != xmix_new { 
+						pints[7] = xmix_new
+						fmt.Println("- 1_OSC:xmix", xmix, "=>", xmix_new) 
+						upd_f = true
+					}
+					/////////////////////
+					// min knee & velo //
+					/////////////////////
+					kloc := pints[74]
+					knee := pints[75]
+					velo := pints[78]
+					kloc_new := kloc
+					knee_new := knee
+					velo_new := velo
+					if knee < 8 { knee_new = 8 }
+					if kloc < 32 { kloc_new = 45 }
+					if velo < 4 { velo_new = 4 }
+					if kloc != kloc_new { 
+						pints[74] = kloc_new
+						fmt.Println("- 0_OSC:kloc", kloc, "=>", kloc_new) 
+						upd_f = true
+					}
+					if knee != knee_new { 
+						pints[75] = knee_new
+						fmt.Println("- 0_OSC:knee", knee, "=>", knee_new) 
+						upd_f = true
+					}
+					if velo != velo_new { 
+						pints[78] = velo_new
+						fmt.Println("- 0_OSC:velo", velo, "=>", velo_new) 
+						upd_f = true
+					}
+				}
 				if mono {
 					////////////////////
 					// stereo => mono //
@@ -898,28 +986,6 @@ func process_dlps(dir, dir2 string, pro, mono, update, robs, yes bool) {
 						if xmix != xmix_new { 
 							pints[39] = xmix_new
 							fmt.Println("- RESON:xmix", xmix, "=>", xmix_new) 
-							upd_f = true
-						}
-					}
-				}
-				if update {
-					///////////////////////
-					// 2023-05-29 update //
-					///////////////////////
-					//////////////////////////
-					// update preview knobs //
-					//////////////////////////
-					prev := pints[81]
-					if prev > 0 {  // if prev active
-						mode := pints[85]
-						vmod := pints[87]
-						vmod_new := 0
-						if mode % 4 == 0 {  // if 4th osc mode, vmod[32]
-							vmod_new = 32
-						}
-						if vmod != vmod_new { 
-							pints[87] = vmod_new
-							fmt.Println("- PREVIEW:vmod", vmod, "=>", vmod_new) 
 							upd_f = true
 						}
 					}
@@ -1009,6 +1075,47 @@ func find_dlp(dir string) {
 			pints := pints_signed(hexs_to_ints(file_str, 4), false)
 
 
+			if pints[7] == 31 {  // 1_osc:xmix
+				fmt.Println("xmix", pints[7])
+				fmt.Println("-", file.Name(), "\n")
+				find_cnt++
+			}
+
+
+/*
+			if pints[75] > 0 && pints[74] < 42 {  // knee & kloc
+				fmt.Println("kloc", pints[74])
+				fmt.Println("knee", pints[75])
+				fmt.Println("velo", pints[78])
+				fmt.Println("-", file.Name(), "\n")
+				find_cnt++
+			}
+*/
+/*
+			if pints[74] == 0 && pints[78] > 0  {  // kloc, velo
+				fmt.Println("kloc", pints[74])
+				fmt.Println("velo", pints[78])
+				fmt.Println("-", file.Name(), "\n")
+				find_cnt++
+			}
+*/
+/*
+			if pints[74] == 0 {  // kloc
+				fmt.Println("kloc", pints[74])
+				fmt.Println("-", file.Name(), "\n")
+				find_cnt++
+			}
+*/
+/*
+			if (pints[0] > 0 || pints[21] > 0) && pints[78] == 0 {  // osc, nois, velo
+				fmt.Println("osc", pints[0])
+				fmt.Println("nois", pints[21])
+				fmt.Println("velo", pints[78])
+				fmt.Println("-", file.Name(), "\n")
+				find_cnt++
+			}
+*/
+/*
 			if pints[21] > 0 && pints[29] > 0 && pints[7] > 0 {  // nois, puls, 1_osc:xmix
 				fmt.Println("nois", pints[21])
 				fmt.Println("puls", pints[29])
@@ -1016,7 +1123,7 @@ func find_dlp(dir string) {
 				fmt.Println("-", file.Name(), "\n")
 				find_cnt++
 			}
-
+*/
 /*			
 			if pints[95] != 0 {  // cvol
 				fmt.Println("cvol", pints[95])

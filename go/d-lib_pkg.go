@@ -21,12 +21,13 @@ type ver_tbl_t struct {
 // librarian & software versions, dates
 // current @ [0]
 var ver_tbl = []ver_tbl_t {  
-	{"9",		"6be9394f",	"2023-07-26"}, // 0
-	{"8",		"7bbb846b",	"2023-06-20"}, // 1
-	{"7",		"73c6c3d7",	"2023-05-24"}, // 2
-	{"6",		"27c263bf",	"2023-01-31"}, // 3
-	{"5",		"2d58f653",	"2023-01-01"}, // 4
-	{"2",		"add46826",	"2022-10-06"}, // 5
+	{"10",		"f1c279cc",	"2023-10-02"}, // 0
+	{"9",		"6be9394f",	"2023-07-26"}, // 1
+	{"8",		"7bbb846b",	"2023-06-20"}, // 2
+	{"7",		"73c6c3d7",	"2023-05-24"}, // 3
+	{"6",		"27c263bf",	"2023-01-31"}, // 4
+	{"5",		"2d58f653",	"2023-01-01"}, // 5
+	{"2",		"add46826",	"2022-10-06"}, // 6
 	{"OV129",	"7bc1bd55",	"2022-07-05"},
 	{"OV128",	"93152c8b",	"2022-05-10"},
 	{"OV127",	"d202d35",	"2022-05-04"},
@@ -75,9 +76,14 @@ const (
 	RX_BUF_BYTES = 512									// serial port rx buffer size
 	CHARS_PER_DOT = 4096								// chars for each activity dot printed
 	CFG_FILE = "d-lib.cfg"								// config file name
-	WORK_DIR = "_WORK_"									// work scratch dir
+	WORK_DIR = "_WORK_"									// presets scratch dir
+	PRO_DIR = "_PRO_"									// profiles scratch dir (off of work dir)
 	PRESETS_DIR = "_ALL_"								// presets dir
 	CRC = "debb20e3"									// good CRC
+	//
+	REG_ERROR = "0x2"									// hive error reg
+	REG_PITCH = "0xa"									// hive pitch reg
+	REG_VOLUME = "0xb"									// hive volume reg
 )
 
 // given sw_ver, return date
