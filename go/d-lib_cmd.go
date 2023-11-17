@@ -14,6 +14,81 @@ import (
 	"math/rand"
 )
 
+
+// Calculate Levenshtein distance between two strings
+// snagged from https://www.golangprograms.com/golang-program-for-implementation-of-levenshtein-distance.html
+func levenshtein(str1, str2 string) int {
+	// helper func, return min of 3
+	min := func(a, b, c int) int {
+		if a < b {
+			if a < c { return a }
+		} else {
+			if b < c { return b }
+		}
+		return c
+	}
+	s1_len := len(str1)
+	s2_len := len(str2)
+	col := make([]int, len(str1)+1)
+	for y := 1; y <= s1_len; y++ {
+		col[y] = y
+	}
+	for x := 1; x <= s2_len; x++ {
+		col[0] = x
+		lastkey := x - 1
+		for y := 1; y <= s1_len; y++ {
+			oldkey := col[y]
+			var incr int
+			if str1[y-1] != str2[x-1] {
+				incr = 1
+			}
+
+			col[y] = min(col[y]+1, col[y-1]+1, lastkey+incr)
+			lastkey = oldkey
+		}
+	}
+	return col[s1_len]
+}
+
+// librarian commands
+var lib_cmds = []string {  
+	"menu",
+	"help",
+	"ports",
+	"view",
+	"match",
+	"diff",
+	"bank",
+	"dump",
+	"pump",
+	"split",
+	"join",
+	"morph",
+	"batch",
+	"knob",
+	"ver",
+	"hcl",
+	"loop",
+	"acal",
+	"reset",
+	"stats",
+}
+
+// return commmand hint
+func cmd_hint (cmd_in string) string {
+	cmd_out := lib_cmds[0]
+	ld_lowest := levenshtein(cmd_in, lib_cmds[0])
+	for _, lib_cmd := range lib_cmds {
+		if strings.HasPrefix(lib_cmd, cmd_in) { return lib_cmd }
+		ld := levenshtein(cmd_in, lib_cmd)
+		if ld < ld_lowest { 
+			ld_lowest = ld
+			cmd_out = lib_cmd 
+		}
+	}
+	return cmd_out
+}
+
 // return first word from user input line
 func user_word() (string) {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -232,14 +307,16 @@ func ver_cmd(file string, pre_chk, pro_chk bool) (bool) {
 		sw_ver = installed_ver()
 		sw_crc = installed_crc_chk()
 	}
+	sw_date := sw_date_lookup(sw_ver)
+	sw_lib := sw_lib_lookup(sw_ver)
 	fmt.Println("> Software version:", sw_ver)
-	fmt.Println("> Software date:", sw_date_lookup(sw_ver))
+	fmt.Println("> Software date & associated librarian:", sw_date, "version", sw_lib)
 	switch sw_ver {
-		case ver_tbl[0].sw :
-			fmt.Println("> Software is CURRENT.") 
-		default :
-			sw_upd = true
-			if file == "" { fmt.Println("> Software may be OLD, you may want to UPDATE it.") }
+	case ver_tbl[0].sw :
+		fmt.Println("> Software is CURRENT.") 
+	default :
+		sw_upd = true
+		if file == "" { fmt.Println("> Software may be OLD, you may want to UPDATE it.") }
 	}
 	if sw_crc { 
 		fmt.Println("> Software PASSED the CRC check.") 
@@ -250,23 +327,22 @@ func ver_cmd(file string, pre_chk, pro_chk bool) (bool) {
 	}
 	if pre_chk {
 		switch sw_ver {
-			case ver_tbl[0].sw :
-				fmt.Println("> Presets should be OK.") 
-			case ver_tbl[1].sw :
-				fmt.Println("> Presets can be UPDATED with this version of the librarian.") 
-			default :
-				fmt.Println("> Presets cannot be UPDATED using this version of the librarian,") 
-				fmt.Println("> You can REPLACE them, or contact Eric for further options.")
+		case ver_tbl[0].sw, ver_tbl[1].sw :
+			fmt.Println("> Presets should be OK.") 
+		default :
+			fmt.Println("> Presets cannot be UPDATED using this version of the librarian,") 
+			fmt.Println("> You can REPLACE them, or contact Eric for further options.")
 		}
 	}
 	if pro_chk {
 		switch sw_ver {
-			case ver_tbl[0].sw :
-				fmt.Println("> Profiles should be OK.") 
-			case ver_tbl[1].sw, ver_tbl[2].sw, ver_tbl[3].sw, ver_tbl[4].sw, ver_tbl[5].sw :
-				fmt.Println("> Profiles can be UPDATED with this version of the librarian.") 
-			default :
-				fmt.Println("> Profiles may need manual adjustment.") 
+		case ver_tbl[0].sw :
+			fmt.Println("> Profiles should be OK.") 
+		case ver_tbl[1].sw :
+			fmt.Println("> Profiles may need manual adjustment.") 
+		default :
+			fmt.Println("> Profiles cannot be UPDATED using this version of the librarian,") 
+			fmt.Println("> You can REPLACE them, or contact Eric for further options.")
 		}
 	}
 	return sw_upd
@@ -379,7 +455,6 @@ func knob_cmd(knob, ofs, set string, min, view bool) {
 	case _kp && !_ki && !_ka:  // page:(w/ no idx)
 		prn_str = fmt.Sprint("> ", page_name)
 		knob_idx += PAGE_SEL_KNOB  // bracket page name
-		set_ui_page()
 	case _kp && _ka:  // page:all
 		prn_str = fmt.Sprint("> ", page_name, ":all")
 		if min {
@@ -391,7 +466,6 @@ func knob_cmd(knob, ofs, set string, min, view bool) {
 			prn_str += fmt.Sprint("=>[min]")
 		}
 		knob_idx += PAGE_SEL_KNOB  // bracket page name
-		set_ui_page()
 	case _kp && _ki:  // page:idx
 		knob_idx += knob_int
 		ptype, plabel, _, _ := pname_lookup(knob_pnames[knob_idx])
@@ -419,7 +493,6 @@ func knob_cmd(knob, ofs, set string, min, view bool) {
 			sp.Close()
 			prn_str += fmt.Sprint("=>[", strings.TrimSpace(pint_disp(rw_pint, ptype)), "]")
 		}
-		set_ui_page()
 	case view:
 		sp := sp_open()  // get current page
 		rx_str := sp_tx_rx(sp, strconv.Itoa(PAGE_SEL_KNOB) + " rk ", false)
@@ -432,6 +505,7 @@ func knob_cmd(knob, ofs, set string, min, view bool) {
 	}
 	if view {
 		view_cmd("", false, true, "", knob_idx) 
+		set_ui_page()
 	}
 	fmt.Println(prn_str)
 }
@@ -543,23 +617,27 @@ func match_cmd(dir, dir2, file string, pro, hdr, guess, slots bool) {
 
 // download to file
 func dump_cmd(file, slot string, knobs, pro, yes bool) {
-	if knobs || slot != "" {  // knobs or slot to DLP file
+	// flags
+	_k := knobs
+	_s := (slot != "")
+	_f := (file != "")
+	//
+	mode := "pre"; if pro { mode = "pro" }
+	// useful cases:
+	switch {
+	case  _k && !_s && _f:  // knobs to DLP file
 		file = file_ext_chk(file, ".dlp")
-		mode := "pre"; if pro { mode = "pro" }
-		if knobs && slot == "" {  // knobs to DLP file
-			pints := sp_rx_knobs_pints(mode)
-			if file_write_str(file, ints_to_hexs(pints, 4), yes) {
-				fmt.Println("> downloaded", mode, "knobs =>", mode, "file", file) 
-			}
-		} else if !knobs && slot != "" {  // slot to DLP file
-			slot_int := slot_int_chk(slot, pro)
-			if file_write_str(file, spi_rd_slot_str(slot_int, pro), yes) {
-				fmt.Println("> downloaded", mode, "slot", slot_int, "=>", mode, "file", file) 
-			}
-		} else {
-			error_exit("Nothing to do")
+		pints := sp_rx_knobs_pints(mode)
+		if file_write_str(file, ints_to_hexs(pints, 4), yes) {
+			fmt.Println("> downloaded", mode, "knobs =>", mode, "file", file) 
 		}
-	} else {  // bulk dump
+	case !_k &&  _s && _f:  // slot to DLP file
+		file = file_ext_chk(file, ".dlp")
+		slot_int := slot_int_chk(slot, pro)
+		if file_write_str(file, spi_rd_slot_str(slot_int, pro), yes) {
+			fmt.Println("> downloaded", mode, "slot", slot_int, "=>", mode, "file", file) 
+		}
+	case !_k && !_s && _f:  // bulk dump
 		file_blank_chk(file)
 		ext := filepath.Ext(file)
 		switch ext {
@@ -572,29 +650,35 @@ func dump_cmd(file, slot string, knobs, pro, yes bool) {
 		if file_write_str(file, rx_str, yes) {
 			fmt.Println("> dumped to", file) 
 		}
+	default: error_exit("Nothing to do")
 	}
-}
+}	
 
 // upload from file
 func pump_cmd(file, slot string, knobs, pro bool) {
-	if knobs || slot != "" {  // DLP file to knobs or slot
+	// flags
+	_k := knobs
+	_s := (slot != "")
+	_f := (file != "")
+	//
+	mode := "pre"; if pro { mode = "pro" }
+	// useful cases:
+	switch {
+	case  _k && !_s && _f:  // DLP file to knobs
 		file = file_ext_chk(file, ".dlp")
 		file_str := file_read_str(file)
-		mode := "pre"; if pro { mode = "pro" }
-		if knobs && slot == "" {  // DLP file to knobs
-			pints := hexs_to_ints(file_str, 4)
-			if len(pints) < SLOT_BYTES { error_exit("Bad file info") }
-			sp_tx_knobs_pints(pints, mode)
-			fmt.Println("> uploaded", mode, "file", file, "=>", mode, "knobs") 
-		} else if !knobs && slot != "" {  // DLP file to slot
-			slot_int := slot_int_chk(slot, pro)
-			addr := spi_slot_addr(slot_int, pro)
-			spi_wr(addr, file_str, false)
-			fmt.Println("> uploaded", mode, "file", file, "=>", mode, "slot", slot_int) 
-		} else {
-			error_exit("Nothing to do")
-		}
-	} else {  // bulk pump
+		pints := hexs_to_ints(file_str, 4)
+		if len(pints) < SLOT_BYTES { error_exit("Bad file info") }
+		sp_tx_knobs_pints(pints, mode)
+		fmt.Println("> uploaded", mode, "file", file, "=>", mode, "knobs") 
+	case !_k &&  _s && _f:  // DLP file to slot
+		file = file_ext_chk(file, ".dlp")
+		file_str := file_read_str(file)
+		slot_int := slot_int_chk(slot, pro)
+		addr := spi_slot_addr(slot_int, pro)
+		spi_wr(addr, file_str, false)
+		fmt.Println("> uploaded", mode, "file", file, "=>", mode, "slot", slot_int) 
+	case !_k && !_s && _f:  // bulk pump
 		ext := filepath.Ext(file)
 		switch ext {
 			case ".pre", ".pro", ".spi", ".eeprom" : // these are OK
@@ -606,6 +690,7 @@ func pump_cmd(file, slot string, knobs, pro bool) {
 		spi_wr(addr, file_str, true)
 		fmt.Println("> pumped from", file)
 		if ext == ".spi" || ext == ".eeprom" || ext == ".pro" { reset_cmd() }
+	default: error_exit("Nothing to do")
 	}
 }
 
@@ -614,11 +699,17 @@ func bank_cmd(slot, file string, pro bool) {
 	slot_int := slot_int_chk(slot, pro)
 	file = file_ext_chk(file, ".bnk")
 	bnk_str := file_read_str(file)
+
+	bnk_str = strip_cmnt(bnk_str)  // strip C & CPP style comments
+
 	bnk_split := strings.Split(bnk_str, "\n")
 	dir, _ := filepath.Split(file)
 	for _, line := range bnk_split {
 		line := strings.TrimSpace(line);
-		if !strings.HasPrefix(line, "//") {  // skip commented lines
+
+		// if !strings.HasPrefix(line, "//") {  // skip commented lines
+		if line != "" {  // skip blank lines
+
 			file := filepath.Join(dir, line)
 			pump_cmd(file, strconv.Itoa(slot_int), false, pro)
 			slot_int++
@@ -702,15 +793,15 @@ func join_cmd(file string, yes bool) {
 	}
 }
 
-func morph_cmd(file string, knobs bool, slot string, seed int, mo, mn, me, mf, mr int) {
-	rand.Seed(int64(seed))
+func morph_cmd(file string, knobs bool, slot string, seed int64, mo, mn, me, mf, mr, ms float64) {
+	rand.Seed(seed)
 	prn_str := ""
 	var pints []int
 	// flags
 	_k := knobs
 	_s := (slot != "")
 	_f := (file != "")
-	_m := (mo | mn | me | mf | mr != 0)
+	_m := (mo != 0) || (mn != 0) || (me != 0) || (mf != 0) || (mr != 0)
 	// useful cases:
 	switch {
 	case  _k && !_s && !_f && _m:  // knobs
@@ -729,8 +820,8 @@ func morph_cmd(file string, knobs bool, slot string, seed int, mo, mn, me, mf, m
 	default: 
 		error_exit("Nothing to do")
 	}
-	prn_str += fmt.Sprint(" (-i=", seed, ")")
-	pints = morph_pints(pints, mo, mn, me, mf, mr)
+	prn_str += fmt.Sprint(" (seed:", seed, ")")
+	pints = morph_pints(pints, mo, mn, me, mf, mr, ms)
 	sp_tx_knobs_pints(pints, "pre")
 	fmt.Println(prn_str)
 }
@@ -740,7 +831,7 @@ func menu_cmd(dir_work string) {
 	path_exe, err := os.Executable(); err_chk(err)
 	dir_exe := filepath.Dir(path_exe)
 	dir_all := filepath.Join(dir_exe, PRESETS_DIR)
-	dir_work_pro := filepath.Join(dir_work, PRO_DIR)
+//	dir_work_pro := filepath.Join(dir_work, PRO_DIR)
 	//
 	file_spi := filepath.Join(PRESETS_DIR, ver_tbl[0].date + ".spi")
 	file_factory := filepath.Join(PRESETS_DIR, ver_tbl[0].date + ".eeprom")
@@ -754,10 +845,11 @@ func menu_cmd(dir_work string) {
 	//
 	path_pre_dl := filepath.Join(dir_work, "download.pre")
 	path_pre_ul := filepath.Join(dir_work, "upload.pre")
-	//
+/*
 	path_pro_dl := filepath.Join(dir_work_pro, "download.pro")
 	path_pro_ul := filepath.Join(dir_work_pro, "upload.pro")
-	//
+*/
+	lib_ver := ver_tbl[0].lib
 	first_f := true
 	for {
 		if !first_f {
@@ -766,128 +858,147 @@ func menu_cmd(dir_work string) {
 		first_f = false
 		fmt.Println("\n")  // 2 blank lines
 		fmt.Println(" ---------------------------------")
-		fmt.Println(" | D-LEV LIBRARIAN - VERSION", ver_tbl[0].lib, " |")
+		fmt.Println(" | D-LEV LIBRARIAN - VERSION", lib_ver, " |")
 		fmt.Println(" | SOFTWARE & PRESET UPDATE MENU |")
 		fmt.Println(" ---------------------------------")
 		fmt.Println("  0. README!")
 		fmt.Println("  1. Serial port setup & check.")
 		fmt.Println("  2. Backup your system to an EEPROM file.")
 		fmt.Println("  3. Check & update the D-Lev software.")
-		fmt.Println("  4. Download all D-Lev presets & profiles to the", dir_work, "directory.")
-		fmt.Println("  5. Update all presets & profiles in the", dir_work, "directory.")
-		fmt.Println("  6. Upload all D-Lev presets & profiles from the", dir_work, "directory.")
+		fmt.Println("  4. Download all D-Lev presets to the", dir_work, "directory.")
+		fmt.Println("  5. Update all presets in the", dir_work, "directory.")
+		fmt.Println("  6. Upload all D-Lev presets from the", dir_work, "directory.")
 		fmt.Println("  7. Upload the latest new presets.")
 		fmt.Println("  8. Convert all presets in the", dir_work, "directory to MONO.")
 		fmt.Println("  9. Overwrite all D-Lev preset slots with presets from the", PRESETS_DIR, "directory.")
 		fmt.Println(" 10. Factory Reset: Overwrite EVERYTHING with the latest factory EEPROM file.")
+		fmt.Println(" 11. Pump some updated presets to their default slots.")
 		fmt.Println("  h. List of commands.")
 		fmt.Println(" hv. List of commands with notes and typical examples of their use.")
 		menu_sel := user_input("Please select a MENU option", true)
 		switch menu_sel {
-			case "0" :
-				fmt.Println()
-				fmt.Print(menu_readme_str)
-			case "1" :
-				fmt.Println()
-				ports_cmd("")
-				if user_prompt("Do you want to CHANGE current port?", false, true) {
-					port_new := user_input("Please input PORT number", false)
-					if port_new == "" {
-						fmt.Println("> -CANCEL-")
-					} else {
-						fmt.Println()
-						ports_cmd(port_new)
-					}
+		case "0" :
+			fmt.Println()
+			fmt.Print(menu_readme_str)
+		case "1" :
+			fmt.Println()
+			ports_cmd("")
+			if user_prompt("Do you want to CHANGE current port?", false, true) {
+				port_new := user_input("Please input PORT number", false)
+				if port_new == "" {
+					fmt.Println("> -CANCEL-")
+				} else {
+					fmt.Println()
+					ports_cmd(port_new)
 				}
-				if user_prompt("Do you want to TEST the port (do a CTRL-C if it hangs)?", false, true) {
-					installed_ver()
-					fmt.Println("> Port seems to be OK!")
-				}
-			case "2" :
-				file_backup := date_hm() + "_back.eeprom"
-				if user_prompt("Do you want to BACKUP your ENTIRE D-Lev to the FILE: " + file_backup + "?", false, true) {
-					dump_cmd(file_backup, "", false, false, false)
-				}
-			case "3" :
-				fmt.Println()
-				sw_upd := ver_cmd("", true, true)
-				if (sw_upd)  {
-					if user_prompt("Do you want to UPDATE your D-Lev SOFTWARE with the FILE: "+ file_spi + "?", false, true) {
-						pump_cmd(path_spi, "", false, false)
-						fmt.Println()
-						ver_cmd("", false, false)
-					}
-				}
-			case "4" :
-				if user_prompt("Do you want to DOWNLOAD your D-Lev presets to " + dir_work +"?", false, true) {
-					dump_cmd(path_pre_dl, "", false, false, true)
-					split_cmd(path_pre_dl, true)
-				}
-				if user_prompt("Do you want to DOWNLOAD your D-Lev profiles to " + dir_work_pro +"?", false, true) {
-					dump_cmd(path_pro_dl, "", false, true, true)
-					split_cmd(path_pro_dl, true)
-				}
-			case "5" :
-				if user_prompt("Do you want to UPDATE the presets in " + dir_work + "?", false, true) {
-					process_dlps(dir_work, dir_work, false, false, true, false, true)
-				}
-				if user_prompt("Do you want to UPDATE the profiles in " + dir_work_pro + "?", false, true) {
-					process_dlps(dir_work_pro, dir_work_pro, true, false, true, false, true)
-				}
-			case "6" :
-				if user_prompt("Do you want to UPLOAD the presets in "+ dir_work + "?", false, true) {
-					join_cmd(path_pre_ul, true)
-					pump_cmd(path_pre_ul, "", false, false)
-				}
-				if user_prompt("Do you want to UPLOAD the profiles in "+ dir_work_pro + "?", false, true) {
-					join_cmd(path_pro_ul, true)
-					pump_cmd(path_pro_ul, "", false, true)
-				}
-			case "7" :
-				fmt.Println("> Here is a LIST of the latest NEW presets:")
-				fmt.Println()
-				file_ext_chk(path_bank_new, ".bnk")
-				file_str := file_read_str(path_bank_new)
-				fmt.Println(file_str)
-				if user_prompt("Do you want to EXAMINE your current D-Lev presets?", false, true) {
-					match_cmd(dir_all, "", "", false, false, true, true) 
-				}
-				if user_prompt("Do you want to UPLOAD the latest NEW presets?", false, true) {
-					slot := user_input("What SLOT do you want to START the upload?", true)
-					if slot != "" {
-						bank_cmd(slot, path_bank_new, false)
-					}
-					if user_prompt("Do you want to EXAMINE your current D-Lev presets?", false, true) {
-						match_cmd(dir_all, "", "", false, false, true, true) 
-					}
-				}
-			case "8" :
-				if user_prompt("Do you want to CONVERT all of the presets in " + dir_work + " to MONO?", false, true) {
-					process_dlps(dir_work, dir_work, false, true, false, false, true)
-				}
-			case "9" :
-				if user_prompt("Do you want to OVERWRITE all D-Lev preset slots with presets in " + PRESETS_DIR + "?", false, true) {
-					bank_cmd("0", path_bank, false)
-					if user_prompt("Do you want to EXAMINE your current D-Lev presets?", false, true) {
-						match_cmd(dir_all, "", "", false, false, true, true) 
-					}
-				}
-			case "10" :
-				if user_prompt("Do you want to OVERWRITE ABSOLUTELY EVERYTHING in your D-Lev with the latest EEPROM file?", false, true) {
-					pump_cmd(path_factory, "", false, false)
+			}
+			if user_prompt("Do you want to TEST the port (do a CTRL-C if it hangs)?", false, true) {
+				installed_ver()
+				fmt.Println("> Port seems to be OK!")
+			}
+		case "2" :
+			file_backup := date_hm() + "_back.eeprom"
+			if user_prompt("Do you want to BACKUP your ENTIRE D-Lev to the FILE: " + file_backup + "?", false, true) {
+				dump_cmd(file_backup, "", false, false, false)
+			}
+		case "3" :
+			fmt.Println()
+			sw_upd := ver_cmd("", true, true)
+			if (sw_upd)  {
+				if user_prompt("Do you want to UPDATE your D-Lev SOFTWARE with the FILE: "+ file_spi + "?", false, true) {
+					pump_cmd(path_spi, "", false, false)
 					fmt.Println()
 					ver_cmd("", false, false)
 				}
-			case "h" :
+			}
+		case "4" :
+			if user_prompt("Do you want to DOWNLOAD your D-Lev presets to " + dir_work +"?", false, true) {
+				dump_cmd(path_pre_dl, "", false, false, true)
+				split_cmd(path_pre_dl, true)
+			}
+/*
+			if user_prompt("Do you want to DOWNLOAD your D-Lev profiles to " + dir_work_pro +"?", false, true) {
+				dump_cmd(path_pro_dl, "", false, true, true)
+				split_cmd(path_pro_dl, true)
+			}
+*/
+		case "5" :
+			if user_prompt("Do you want to UPDATE the presets in " + dir_work + "?", false, true) {
+				process_dlps(dir_work, dir_work, false, false, true, false, true, false)
+			}
+/*
+			if user_prompt("Do you want to UPDATE the profiles in " + dir_work_pro + "?", false, true) {
+				process_dlps(dir_work_pro, dir_work_pro, true, false, true, false, true, false)
+			}
+*/
+		case "6" :
+			if user_prompt("Do you want to UPLOAD the presets in "+ dir_work + "?", false, true) {
+				join_cmd(path_pre_ul, true)
+				pump_cmd(path_pre_ul, "", false, false)
+			}
+/*
+			if user_prompt("Do you want to UPLOAD the profiles in "+ dir_work_pro + "?", false, true) {
+				join_cmd(path_pro_ul, true)
+				pump_cmd(path_pro_ul, "", false, true)
+			}
+*/
+		case "7" :
+			fmt.Println("> Here is a LIST of the latest NEW presets:")
+			fmt.Println()
+			file_ext_chk(path_bank_new, ".bnk")
+			file_str := file_read_str(path_bank_new)
+			fmt.Println(file_str)
+			if user_prompt("Do you want to EXAMINE your current D-Lev presets?", false, true) {
+				match_cmd(dir_all, "", "", false, false, true, true) 
+			}
+			if user_prompt("Do you want to UPLOAD the latest NEW presets?", false, true) {
+				slot := user_input("What SLOT do you want to START the upload?", true)
+				if slot != "" {
+					bank_cmd(slot, path_bank_new, false)
+				}
+				if user_prompt("Do you want to EXAMINE your current D-Lev presets?", false, true) {
+					match_cmd(dir_all, "", "", false, false, true, true) 
+				}
+			}
+		case "8" :
+			if user_prompt("Do you want to CONVERT all of the presets in " + dir_work + " to MONO?", false, true) {
+				process_dlps(dir_work, dir_work, false, true, false, false, true, false)
+			}
+		case "9" :
+			if user_prompt("Do you want to OVERWRITE all D-Lev preset slots with presets in " + PRESETS_DIR + "?", false, true) {
+				bank_cmd("0", path_bank, false)
+				if user_prompt("Do you want to EXAMINE your current D-Lev presets?", false, true) {
+					match_cmd(dir_all, "", "", false, false, true, true) 
+				}
+			}
+		case "10" :
+			if user_prompt("Do you want to OVERWRITE ABSOLUTELY EVERYTHING in your D-Lev with the latest EEPROM file?", false, true) {
+				pump_cmd(path_factory, "", false, false)
 				fmt.Println()
-				help_cmd(false)
-			case "hv" :
-				fmt.Println()
-				help_cmd(true)
-			case "" :
-				// do nothing
-			default:
-				fmt.Println("> Invalid menu selection!")
+				ver_cmd("", false, false)
+			}
+
+		case "11" :
+			if user_prompt("Do you want to EXAMINE your current D-Lev presets?", false, true) {
+				match_cmd(dir_all, "", "", false, false, true, true) 
+			}
+			if user_prompt("Do you want to PUMP some modified presets to their default slots?", false, true) {
+				dlps_pump(dir_all, false)
+			}
+		case "h" :
+			fmt.Println()
+			help_cmd(false)
+		case "hv" :
+			fmt.Println()
+			help_cmd(true)
+		case "robs" :
+			if user_prompt("Do you want to apply Rob Schwimmer Pitch Preview to the presets in " + dir_work + "?", false, true) {
+				process_dlps(dir_work, dir_work, false, false, false, true, true, false)
+			}
+		case "" :
+			// do nothing
+		default:
+			fmt.Println("> Invalid menu selection!")
 		}
 	}
 }

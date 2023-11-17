@@ -10,6 +10,7 @@ import (
 	"math/bits"
 	"fmt"
 	"os"
+	"regexp"
 )
 
 type ver_tbl_t struct {
@@ -21,23 +22,24 @@ type ver_tbl_t struct {
 // librarian & software versions, dates
 // current @ [0]
 var ver_tbl = []ver_tbl_t {  
-	{"10",		"f1c279cc",	"2023-10-02"}, // 0
-	{"9",		"6be9394f",	"2023-07-26"}, // 1
-	{"8",		"7bbb846b",	"2023-06-20"}, // 2
-	{"7",		"73c6c3d7",	"2023-05-24"}, // 3
-	{"6",		"27c263bf",	"2023-01-31"}, // 4
-	{"5",		"2d58f653",	"2023-01-01"}, // 5
-	{"2",		"add46826",	"2022-10-06"}, // 6
-	{"OV129",	"7bc1bd55",	"2022-07-05"},
-	{"OV128",	"93152c8b",	"2022-05-10"},
-	{"OV127",	"d202d35",	"2022-05-04"},
-	{"OV126",	"af3f63c4",	"2022-04-30"},
-	{"OV125",	"67517a97",	"2022-04-17"},
-	{"OV124",	"5ba55477",	"2022-03-17"},
-	{"OV121",	"7b6a0484",	"2022-01-01"},
-	{"OV120",	"84f7f31c",	"2021-12-18"},
-	{"OV119",	"52fe7d",	"2021-12-04"},
-	{"OV115",	"240b1e68",	"2021-10-31"},
+	{"11",		"cabfa8fe",	"2023-11-02"}, // 0
+	{"10",		"f1c279cc",	"2023-10-02"}, // 1
+	{"9",		"6be9394f",	"2023-07-26"}, // 2
+	{"8",		"7bbb846b",	"2023-06-20"}, // 3
+	{"7",		"73c6c3d7",	"2023-05-24"}, // 4
+	{"6",		"27c263bf",	"2023-01-31"}, // 5
+	{"5",		"2d58f653",	"2023-01-01"}, // 6
+	{"2",		"add46826",	"2022-10-06"}, // 7
+	{"old_129",	"7bc1bd55",	"2022-07-05"},
+	{"old_128",	"93152c8b",	"2022-05-10"},
+	{"old_127",	"d202d35",	"2022-05-04"},
+	{"old_126",	"af3f63c4",	"2022-04-30"},
+	{"old_125",	"67517a97",	"2022-04-17"},
+	{"old_124",	"5ba55477",	"2022-03-17"},
+	{"old_121",	"7b6a0484",	"2022-01-01"},
+	{"old_120",	"84f7f31c",	"2021-12-18"},
+	{"old_119",	"52fe7d",	"2021-12-04"},
+	{"old_115",	"240b1e68",	"2021-10-31"},
 }
 
 const (
@@ -90,6 +92,14 @@ const (
 func sw_date_lookup(sw_ver string) (string) {
 	for _, entry := range ver_tbl {
 		if sw_ver == entry.sw { return entry.date }
+	}
+	return "unknown"
+}
+
+// given sw_ver, return librarian version
+func sw_lib_lookup(sw_ver string) (string) {
+	for _, entry := range ver_tbl {
+		if sw_ver == entry.sw { return entry.lib }
 	}
 	return "unknown"
 }
@@ -165,3 +175,35 @@ func error_exit(error_str string) {
 func err_chk(err error) {
 	if err != nil { error_exit(err.Error()) }
 }
+
+// remove C style block comments
+func strip_c_cmnt(str string) string {
+	c_cmnt, err:= regexp.Compile(`/\*[^*]*\*+(?:[^*/][^*]*\*+)*/`); err_chk(err)
+	return c_cmnt.ReplaceAllString(str, string(""))
+}
+
+// remove C++ style EOL comments
+func strip_cpp_cmnt(str string) string {
+	cpp_cmnt, err := regexp.Compile(`//.*`); err_chk(err)
+	return cpp_cmnt.ReplaceAllString(str, string(""))
+}
+
+func strip_cmnt(str string) string {
+	return strip_cpp_cmnt(strip_c_cmnt(str))
+}
+
+/*
+// this is a comment
+/\
+*  Comment? *\
+/
+
+// not a comment
+"/\
+* Comment? *\
+/"
+*/
+
+
+
+

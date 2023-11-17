@@ -28,6 +28,6 @@ func date_hm() (string) {
 }
 
 // return time for use as random seed
-func timeseed() (int) {
-	return int(time.Now().UnixNano())
+func timeseed() (int64) {
+	return time.Now().UnixNano()
 }

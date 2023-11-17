@@ -14,6 +14,40 @@
 ////////////////
 // CHANGE LOG //
 ////////////////
+2023-11-06 : v11 - RELEASED as 2023-11-02 -
+- Match command scores now EOL comments.
+- Bank command now strips out all C & C++ type comments.
+
+2023-11-04 : v11
+- process_dlps(): removed dir "." default, dir2 now defaults to dir.
+- Restructured pump_cmd(), dump_cmd().
+- Monkeyed with process_dlps() a bit.
+
+2023-11-02 : v11
+- Fixed batch command -r filter.
+- Added batch command -dry flag.
+- Menu has new "robs" option (unlisted).
+- New dlps_pump() function to pump updated presets to default slots.
+
+2023-10-25 : v11
+- Unknown command guessing via prefix & Levenshtein distance.
+
+2023-10-22 : v11
+- Knob commmand now only switches LCD screen with -v.
+- Working on morph_cmd():
+- New -ms flag that randomly flips encoder sign with given probability.
+- Signed encoders now confined to signed areas.
+
+2023-10-21 : v11
+- Working on morph_cmd():
+- Seed is now int64.
+- Morph mults now float64, scaled 1/100 of full scale (percent).
+
+2023-10-18 : v11
+- FLT_OSC:xmix type 0x24 => 0xcd.
+- FLT_NOISE:xmix type 0x24 => 0xcd.
+- TODO: update the update procedures!
+
 2023-10-08 : v10 - RELEASED as 2023-10-02 -
 - Restructured knob_cmd(), removed -k pg:all -s 0 option (use min).
 

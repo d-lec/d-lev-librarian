@@ -19,7 +19,7 @@ COMMANDS & FLAGS:
   split <-f file.ext> <-y>                                    Split PRE|PRO|EEPROM container file into sub files
   join  <-f file.ext> <-y>                                    Join DLP|PRE|PRO|SPI sub files into container file
   morph <-k|-s slot|-f file> <-mo|n|e|f|r|> <-i seed>         Morph knobs|slot|DLP file to knobs
-  batch <-d dir> <-d2 dir> <-m|u|r> <pro> <-y>                Batch convert DLP files (mono, update, rob)
+  batch <-d dir> <-d2 dir> <-m|u|r> <pro> <-y> <-dry>         Batch convert DLP files (mono, update, rob)
   knob  <-k page:knob|all> <-o offset|-s set|-min> <-v>       Read/set/offset/min knob value, min all page knobs
   ver   <-f file.ext>                                         Read software version & check CRC
   stats <-p> <-v> <-e>                                        Read stats (fields Hz, processor errors)
@@ -168,12 +168,12 @@ USAGE EXAMPLES:
     LIB_EXE join -f stuff.pro
 - Join files "000.dlp" thru "249.dlp" to "some.pre":
     LIB_EXE join -f some.pre
-- Morph knobs (osc):
-    LIB_EXE morph -mo 12
+- Morph knobs (osc, signs):
+    LIB_EXE morph -mo 12 -ms 0.5
 - Morph slot 23 (filters, resonator, seed):
     LIB_EXE morph -s 23 -mf 5 -mr 20 -i 9
-- Morph file "cello_8" (osc, filters, resonator):
-    LIB_EXE morph -f cello_8 -mo 10 -mf 10 -mr 10
+- Morph file "cello_8" (filters, resonator):
+    LIB_EXE morph -f cello_8 -mf 1 -mr 1
 - Batch convert all presets in the _ALL_ directory to mono in the _MONO_ directory:
     LIB_EXE batch -d _ALL_ -d2 _MONO_ -m
 - Batch update all presets in the _ALL_ directory and overwrite them:
@@ -213,32 +213,41 @@ var menu_readme_str = `
 // README //
 ////////////
 D-LEV SOFTWARE CHANGES:
-- 0_OSC:harm < 0: osc 1&2 sine (h/t Vincent).
-- 1_OSC:xmix < 0: ring modulation; osc 1&2 => A440.
-- VOLUME:velo < 0: rectifies velocity; else +/- velocity.
-- All Ofs +/- [0:127] => [0:255] (increased resolution, not range).
-- Drop knob now xmix of linear and vol^2 (pivot @ -12dB).
-- Drop knob sorce now post Ofs+.
-- Lift knob source now post Sens, ^2 scaled.
+- PREVIEW:mode[12] for stimulus of bells and such.
+- PREVIEW:mode[12] tone is +/- treble only.
+- Volume velocity sense moved pre V_FIELD:Drop.
+- Volume velocity is now bi-modal (20Hz & 80Hz) with -48dB lower limit.
+- FLT_OSC & FLT_NOISE xmix can now do negative mixing @ filter input.
 
-LIBRARIAN CHANGES:
-- New stats command, displays fields Hz & processor errors.
-- Backup EEPROM file name: yyyy-mm-dd_hh-mm_back.eeprom.
-- Command line help & examples new menu items "h" & "hv".
-- Command line examples now use current exe file name.
-- Extended menu README info.
+D-LIB LIBRARIAN CHANGES:
+- Associated librarian version now reported with software inspection.
+- Knob commmand now only switches user LCD screen with -v.
+- Morph of signed encoders now confined to signed areas.
+- Morph -ms flag randomly flips encoder sign with given [0:1] probability.
+- Morph -m* flags are now floats for finer resolution.
 
 UPDATE PROCESSING:
 - The librarian PRESET update procedure will:
-  - Increase 1_OSC:xmix to match new knob weighting.
-  - Apply default minimum VOLUME:kloc[45], knee[8], velo[4].
-- The librarian PROFILE update procedure will:
-  - Double the current value of Ofs- and Ofs+ knobs.
-  - Apply default Dith[2].
-  - Apply default V_FIELD:Drop[16].
+  - Apply default minimum VOLUME:dloc[16] if VOLUME:damp > 0.
+
+MODIFIED PRESETS:
+- The following presets in the _ALL_ directory have been modified to use the new
+  PREVIEW:mode[12].  You can use menu choice 11 to pump them to their default slots,
+  or you can manually pump them individually if you want them in different slots:
+  
+  SLOT  PRESET
+  ----  ------
+    51  dobro.dlp
+    93  bowl_1.dlp
+    94  bowl_3.dlp
+    95  little_ben_0.dlp
+    96  little_ben_1.dlp
+    99  wine_1.dlp
+   115  bowl_2.dlp
+   135  vanbelis.dlp
 
 GENERAL:
-- To UPDATE the software and UPDATE ALL of the preset & profile SLOTS: Do 1 thru 7.
+- To UPDATE the software and UPDATE ALL of the preset & SLOTS: Do 1 thru 7, then 11.
 - To UPDATE the software and OVERWRITE ALL of the preset SLOTS: Do 1 thru 3, then 9.
 - TO UPDATE & OVERWRITE ABSOLUTELY EVERYTHING INCLUDING PROFILE SLOTS: Do 1, 2, 10.
 - To CONVERT ALL of the preset SLOTS to MONO: Do 1, 2, 4, 8, 6.
@@ -250,3 +259,4 @@ GENERAL:
 // README //
 ////////////
 `
+

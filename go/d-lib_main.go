@@ -18,7 +18,8 @@ func main() {
 		menu_cmd(WORK_DIR)
     } else {
 		// parse subcommands
-		switch os.Args[1] {
+		cmd := os.Args[1]
+		switch cmd {
 			case "menu" : menu()
 			case "help", "-help", "-h", "/h" : help()
 			case "ports" : ports()
@@ -40,7 +41,8 @@ func main() {
 			case "reset" : reset_cmd()
 			case "stats" : stats()
 			case "dev" : dev()  // dev stuff
-			default : error_exit(fmt.Sprint("Unknown command: ", os.Args[1]))
+			default : 
+				error_exit(fmt.Sprint("Command '", cmd, "' not found (did you mean '", cmd_hint(cmd), "' ?)"))
 		}
 	}
 }  // end of main()
@@ -218,14 +220,16 @@ func morph() {
 	file := sub.String("f", "", "source `file` name")
 	knobs := sub.Bool("k", false, "source knobs")
 	slot := sub.String("s", "", "source `slot` number")
-	seed := sub.Int("i", timeseed(), "initial seed")
-	mo := sub.Int("mo", 0, "oscillator multiplier")
-	mn := sub.Int("mn", 0, "noise multiplier")
-	me := sub.Int("me", 0, "eq (bass & treble) multiplier")
-	mf := sub.Int("mf", 0, "filter multiplier")
-	mr := sub.Int("mr", 0, "resonator multiplier")
+	seed := sub.Int64("i", 0, "initial seed")
+	mo := sub.Float64("mo", 0, "oscillator multiplier")
+	mn := sub.Float64("mn", 0, "noise multiplier")
+	me := sub.Float64("me", 0, "eq (bass & treble) multiplier")
+	mf := sub.Float64("mf", 0, "filter multiplier")
+	mr := sub.Float64("mr", 0, "resonator multiplier")
+	ms := sub.Float64("ms", 0, "sign change odds (0 to 1)")
 	sub.Parse(os.Args[2:])
-	morph_cmd(*file, *knobs, *slot, *seed, *mo, *mn, *me, *mf, *mr)
+	if *seed == 0 { *seed = timeseed() }
+	morph_cmd(*file, *knobs, *slot, *seed, *mo, *mn, *me, *mf, *mr, *ms)
 }
 
 
@@ -236,16 +240,17 @@ func morph() {
 // read, processs, write all *.dlp in dir => dir2
 func batch() {
 	sub := flag.NewFlagSet("batch", flag.ExitOnError)
-	dir := sub.String("d", ".", "source `directory` name")
-	dir2 := sub.String("d2", ".", "target `directory` name")
+	dir := sub.String("d", "", "source `directory` name")
+	dir2 := sub.String("d2", "", "target `directory` name")
 	pro := sub.Bool("pro", false, "profile mode")
 	mono := sub.Bool("m", false, "to mono")
 	update := sub.Bool("u", false, "update")
 	robs := sub.Bool("r", false, "Rob S. PP")
 	yes := sub.Bool("y", false, "overwrite files")
+	dry := sub.Bool("dry", false, "dry run")
 	sub.Parse(os.Args[2:])
 	//
-	process_dlps(*dir, *dir2, *pro, *mono, *update, *robs, *yes)
+	process_dlps(*dir, *dir2, *pro, *mono, *update, *robs, *yes, *dry)
 }
 
 // do a bunch of update stuff via interactive menu
@@ -264,6 +269,16 @@ func menu() {
 
 func dev() {
 
+	// check comment removal from file
+	sub := flag.NewFlagSet("dev", flag.ExitOnError)
+	file := sub.String("f", "", "source `file` name")
+	sub.Parse(os.Args[2:])
+	//
+	str := file_read_str(*file)
+	fmt.Println(strip_cmnt(str))
+
+
+/*
 	// find DLP files with certain characteristics
 	sub := flag.NewFlagSet("dev", flag.ExitOnError)
 	dir := sub.String("d", ".", "`directory` name")
@@ -271,7 +286,7 @@ func dev() {
 	//
 	find_dlp(*dir)
 	//dev_cmd()
-
+*/
 /*
 	sub := flag.NewFlagSet("dev", flag.ExitOnError)
 	str := sub.String("s", "", "test string")
