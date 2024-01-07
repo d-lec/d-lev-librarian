@@ -26,7 +26,7 @@ func spi_rd(addr int, addr_end int, act_f bool) (string) {
 	sp := sp_open()
 	rx_str := sp_tx_rx(sp, strconv.Itoa(addr) + " " + strconv.Itoa(addr_end) + " rs ", act_f)
 	sp.Close()
-	rx_str = decruft_hcl(string(rx_str))
+	rx_str = decruft_hcl(rx_str)
 	if len(strings.Split(rx_str, "\n")) != 1 + (addr_end - addr) / 4 { error_exit("Bad SPI read") }
 	return rx_str
 }
@@ -56,18 +56,17 @@ func spi_wr_prot(sp serial.Port, prot_f bool) {
 func spi_wr(addr int, wr_str string, act_f bool) {
 	sp := sp_open()
 	spi_wr_prot(sp, false)
-	split_strs := (strings.Split(strings.TrimSpace(wr_str), "\n"))
+	wr_strs := str_split_trim(wr_str)
 	var chars int
-	for _, line_str := range split_strs {
+	for _, wr_line := range wr_strs {
 		var cmd string
-		line_str := strings.TrimSpace(line_str)
 		if addr % EE_PG_BYTES == 0 {  // page boundary
 			spi_wr_wait(sp)
 			spi_wr_en(sp)
 			cmd = strconv.Itoa(addr) + " "
 		}
-		if line_str != "0" { cmd += "0x" }  // no 0x for zero data
-		cmd += line_str + " ws "
+		if wr_line != "0" { cmd += "0x" }  // no 0x for zero data
+		cmd += wr_line + " ws "
 		sp_tx_rx(sp, cmd, false)
 		chars += len(cmd)
 		addr += EE_RW_BYTES;
@@ -109,17 +108,16 @@ func spi_slot_addr(slot int, pro bool) (int) {
 }
 
 // trim command, address, and prompt cruft from hcl read string
-func decruft_hcl(str_i string) (string) {
-	lines_i := strings.Split(strings.TrimSpace(str_i), "\n")
-	lines_o := ""
-	for idx, line := range lines_i {
-		if (idx != 0) && (idx != len(lines_i) - 1) {
-			line := strings.TrimSpace(line)
-			addr_end := strings.Index(line, "]")
-			lines_o += line[addr_end+1:] + "\n" 
+func decruft_hcl(str_i string) (str_o string) {
+	strs_i := str_split_trim(str_i)
+	for idx, str := range strs_i {
+		// kill cmd & prompt & addr
+		if (idx != 0) && (idx != len(strs_i) - 1) {  
+			addr_end := strings.Index(str, "]")
+			str_o += str[addr_end+1:] + "\n" 
 		}
 	}
-	return strings.TrimSpace(lines_o)
+	return strings.TrimSpace(str_o)
 }
 
 // get single slot data string

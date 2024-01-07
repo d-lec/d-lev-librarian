@@ -149,7 +149,7 @@ var pre_params = []param_t {
 	{0x44, "knee",  "e_p1_ds"},	// 75
 	{0x76, "fall",  "e_p2_ds"},	// 76
 	{0x75, "rise",  "e_p3_ds"},	// 77
-	{0xd1, "velo",  "e_p4_ds"},	// 78
+	{0x30, "velo",  "e_p4_ds"},	// 78
 	{0x73, "damp",  "e_p5_ds"},	// 79
 	{0x25, "dloc",  "e_p6_ds"},	// 80
 	// pitch preview:
@@ -177,7 +177,7 @@ var pre_params = []param_t {
 var knob_pnames = []string {  
 	"v_p6_ds",  "v_p7_ds",  "v_p0_ds",  "p_p0_ds",  "ps_p1_ds", "b_p0_ds",  "ps_p0_ds", "menu_pg_ds",  // [0:7] D-LEV
 	"v_p6_ds",  "v_p8_ds",  "pp_p0_ds", "eq_p1_ds", "o_p0_ds",  "eq_p0_ds", "n_p0_ds",  "menu_pg_ds",  // [8:15] LEVELS
-	"pp_p6_ds", "pp_p3_ds", "pp_p0_ds", "pp_p4_ds", "pp_p1_ds", "pp_p5_ds", "pp_p2_ds", "menu_pg_ds",  // [16:23] PREVIEW : vmod, pmod, prev, mode, harm, tone, oct
+	"pp_p6_ds", "pp_p3_ds", "pp_p0_ds", "pp_p4_ds", "pp_p1_ds", "pp_p5_ds", "pp_p2_ds", "menu_pg_ds",  // [16:23] PREVIEW
 	"m_p1_ds",  "m_p4_ds",  "m_p6_ds",  "m_p5_ds",  "m_p2_ds",  "m_p0_ds",  "m_p3_ds",  "menu_pg_ds",  // [24:31] MIDI
 	"e_p0_ds",  "e_p3_ds",  "e_p1_ds",  "e_p2_ds",  "e_p4_ds",  "e_p5_ds",  "e_p6_ds",  "menu_pg_ds",  // [32:39] VOLUME
 	"pc_p4_ds", "pc_p0_ds", "pc_p1_ds", "e_p7_ds", "pc_p3_ds", "pc_p2_ds",  "t_p2_ds",  "menu_pg_ds",  // [40:47] PITCH
@@ -379,22 +379,29 @@ func freq_pint(freq, ptype int) (int) {
 	}
 }
 
-// given pname, return ptype, plabel, pidx, pgroup
-func pname_lookup(pname string) (int, string, int, string) {
+// given pname, return ptype, plabel, pidx, kidx, pgroup
+func pname_lookup(pname string) (int, string, int, int, string) {
+	// helper function
+	kidx := func() (int) {
+		for kidx, kname := range knob_pnames {
+			if pname == kname { return kidx }
+		}
+		return 0
+	}
 	for pidx, param := range pre_params {
-		if pname == param.pname { return param.ptype, param.plabel, pidx, "pre" }
+		if pname == param.pname { return param.ptype, param.plabel, pidx, kidx(), "pre" }
 	}
 	for pidx, param := range pro_params {
-		if pname == param.pname { return param.ptype, param.plabel, pidx, "pro" }
+		if pname == param.pname { return param.ptype, param.plabel, pidx, kidx(), "pro" }
 	}
 	for pidx, param := range not_params {
-		if pname == param.pname { return param.ptype, param.plabel, pidx, "not" }
+		if pname == param.pname { return param.ptype, param.plabel, pidx, kidx(), "not" }
 	}
-	return 0, "", 0, ""
+	return 0, "", 0, 0, ""
 }
 
 // given pidx & pro, return kidx, kflg
-func knob_lookup(pidx int, pro bool) (int, bool) {
+func pidx_to_kidx(pidx int, pro bool) (int, bool) {
 	if pro {
 		if pidx >= len(pro_params) { return 0, false }
 		for kidx, kname := range knob_pnames {
@@ -409,24 +416,24 @@ func knob_lookup(pidx int, pro bool) (int, bool) {
 	return 0, false
 }
 
-// given partial page str, return name & idx
-// gotcha: for ""  HasPrefix always returns true!
-func page_lookup(page string) (string, int) {
-	if page != "" {
-		page = strings.ToUpper(page)
-		for idx, name := range page_names {
-			name = strings.TrimSpace(name)
-			if strings.HasPrefix(name, page) { return name, idx }
-		}
+// given partial page name, return idx & full name
+func fuzzy_page_lookup(page string) (int, string) {
+	if page == "" {	return -1, "" }
+	page = strings.ToUpper(strings.TrimSpace(page))
+	names := strs_trim(page_names)
+	list := fuzzy_list(page, names, 1, true)
+	if len(list) == 0 {	return -1, "" }
+	for idx, name := range names {
+		if list[0] == name { return idx, name }
 	}
-	return "", -1  // default
+	return -1, ""  // default
 }
 
-// put knob ints in preset / slot order
-func knob_pre_order(kints []int, mode string) ([]int) {
+// put knob ints in pints order
+func kints_pints_order(kints []int, mode string) ([]int) {
 	pints := make([]int, SLOT_BYTES)
 	for kidx, kname := range knob_pnames {
-		_, _, pidx, pmode := pname_lookup(kname)
+		_, _, pidx, _, pmode := pname_lookup(kname)
 		if mode == pmode {
 			pints[pidx] = kints[kidx]
 		}
@@ -435,14 +442,14 @@ func knob_pre_order(kints []int, mode string) ([]int) {
 }
 
 // put knob hex str in preset / slot order, return hex string
-func knob_pre_str(knob_str string, pro bool) (string) {
-	str_split := (strings.Split(strings.TrimSpace(knob_str), "\n"))
-	if len(str_split) < KNOBS_TOTAL { error_exit("Bad knob info") }
+func knobs_pre_str(knob_str string, pro bool) (string) {
+	knob_strs := str_split_trim(knob_str)
+	if len(knob_strs) < KNOBS_TOTAL { error_exit("Bad knob info") }
 	hex_str := ""
 	line_str := ""
 	for pidx:=0; pidx<SLOT_BYTES; pidx++ {
-		kidx, kflg := knob_lookup(pidx, pro)
-		if kflg { line_str = fmt.Sprintf("%02s", str_split[kidx]) + line_str } else { line_str = "00" + line_str }
+		kidx, kflg := pidx_to_kidx(pidx, pro)
+		if kflg { line_str = fmt.Sprintf("%02s", knob_strs[kidx]) + line_str } else { line_str = "00" + line_str }
 		if pidx % 4 == 3 { 
 			hex_str += line_str + "\n" 
 			line_str = ""
@@ -452,38 +459,26 @@ func knob_pre_str(knob_str string, pro bool) (string) {
 }
 
 // split eeprom str into pre / pro / spi strings
-func split_eeprom_str(eeprom_str string) (string, string, string) {
+func split_eeprom_str(eeprom_str string) (pre_str, pro_str, spi_str string) {
 	str_split := strings.Split(strings.TrimSpace(eeprom_str), "\n")
-	pre_str := ""
-	pro_str := ""
-	spi_str := ""
-	const lines = SLOT_BYTES/EE_RW_BYTES
-	for line, str := range str_split {
-		if line < PRE_SLOTS*lines { 
-			pre_str += str + "\n"
-		} else if line < SLOTS*lines { 
-			pro_str += str + "\n"
-		} else { 
-			spi_str += str + "\n"
-		}
-	}
-	return pre_str, pro_str, spi_str
+	pro_start := PRE_SLOTS * DLP_LINES
+	spi_start := SLOTS * DLP_LINES
+	pre_strs := str_split[:pro_start]
+	pro_strs := str_split[pro_start:spi_start]
+	spi_strs := str_split[spi_start:]
+	pre_str = strings.Join(pre_strs, "\n")
+	pro_str = strings.Join(pro_strs, "\n")
+	spi_str = strings.Join(spi_strs, "\n")
+	return
 }
 
 // split pre/pro str into dlp strings
-func split_pre_pro_str(pre_pro_str string) ([]string) {
-	str_split := strings.Split(strings.TrimSpace(pre_pro_str), "\n")
-	var dlp_strs []string
-	dlp_str := ""
-	const lines = SLOT_BYTES/EE_RW_BYTES
-	for line, str := range str_split {
-		dlp_str += str + "\n"
-		if line % lines == lines - 1 { 
-			dlp_strs = append(dlp_strs, dlp_str)
-			dlp_str = ""
-		}
+func split_pre_pro_str(pre_pro_str string) (dlp_strs []string) {
+	pre_pro_strs := str_split_trim(pre_pro_str)
+	for i:=0; i<len(pre_pro_strs); i+=DLP_LINES {
+		dlp_strs = append(dlp_strs, strings.Join(pre_pro_strs[i:i+DLP_LINES], "\n"))
 	}
-	return dlp_strs
+	return
 }
 
 // read PRE|PRO|EEPROM file and extract dlp strings
@@ -508,6 +503,15 @@ func file_dlp_strs(file, mode string) ([]string, string) {
 	return split_pre_pro_str(file_str), mode
 }
 
+// read PRE|PRO|EEPROM file and extract slot string
+func file_slot_str(file, slot, mode string) (string, string) {
+	var file_strs []string
+	file_strs, mode = file_dlp_strs(file, mode)
+	pro := (mode == "pro")
+	slot_int := slot_int_chk(slot, pro)
+	return file_strs[slot_int], mode
+}
+
 // read SPI|EEPROM file and extract software strings
 func file_sw_strs(file string) ([]string) {
 	ext := filepath.Ext(file)
@@ -521,7 +525,24 @@ func file_sw_strs(file string) ([]string) {
 		case "" : error_exit(fmt.Sprint("Missing file extension"))
 		default : error_exit(fmt.Sprint("Wrong file extension: ", ext))
 	}
-	return strings.Split(strings.TrimSpace(file_str), "\n")
+	return str_split_trim(file_str)
+}
+
+// read BNK file and extract dlp filename strings
+func file_bank_strs(file string) (strs_o []string) {
+	file = file_ext_chk(file, ".bnk")
+	dir, _ := filepath.Split(file)
+	file_str := file_read_str(file)  // read bank file
+	file_str = strip_cmnt(file_str)
+	file_strs := str_split_trim(file_str)
+	for _, str := range file_strs {
+		if str != "" { 
+			str = file_ext_chk(str, ".dlp")
+			str = filepath.Join(dir, str)
+			strs_o = append(strs_o, str)
+		}
+	}
+	return
 }
 
 // generate knob ui display strings
@@ -530,7 +551,7 @@ func knob_ui_strs(hex_str string) ([]string) {
 	if len(kints) < KNOBS_TOTAL { error_exit("Bad knob info") }
 	var strs []string
 	for kidx, kname := range knob_pnames {
-		ptype, plabel, _, _ := pname_lookup(kname)
+		ptype, plabel, _, _, _ := pname_lookup(kname)
 		if kidx % KNOBS == PAGE_SEL_KNOB { 
 			strs = append(strs, page_names[kidx / KNOBS])
 		} else { 
@@ -546,7 +567,7 @@ func pre_ui_strs(hex_str string, pro bool) ([]string) {
 	if len(pints) < SLOT_BYTES { error_exit("Bad file / slot info") }
 	var strs []string
 	for idx, pname := range knob_pnames {
-		ptype, plabel, pidx, pgroup := pname_lookup(pname)
+		ptype, plabel, pidx, _, pgroup := pname_lookup(pname)
 		if idx % KNOBS == PAGE_SEL_KNOB { 
 			strs = append(strs, page_names[idx / KNOBS])
 		} else { 
@@ -595,7 +616,7 @@ func diff_pres(pre_str0, pre_str1 string, pro bool) ([]string, []string, []bool)
 	var strs1 []string
 	var diffs []bool
 	for kidx, pname := range knob_pnames {
-		ptype, plabel, pidx, pgroup := pname_lookup(pname)
+		ptype, plabel, pidx, _, pgroup := pname_lookup(pname)
 		if kidx % KNOBS == PAGE_SEL_KNOB { 
 			strs0 = append(strs0, page_names[kidx / KNOBS])
 			strs1 = append(strs1, page_names[kidx / KNOBS])
@@ -642,7 +663,7 @@ func diff_prn_str(strs0, strs1 []string, diffs []bool) (string) {
 		if chg_f { prn_str += page_str }
 	}
 	if chgs != 0 { prn_str = h_line + prn_str }  // top line
-	prn_str += fmt.Sprintln("> differences:", chgs)
+	prn_str += fmt.Sprint("> differences: ", chgs)
 	return strings.TrimSpace(prn_str)
 }
 
@@ -685,7 +706,7 @@ func comp_file_data(data2_strs, name_strs, data_strs []string, pro, guess bool) 
 		if ssd_min == 0 { 
 			strs = append(strs, name_strs[idx_min])
 		} else if guess {
-			strs = append(strs, name_strs[idx_min] + " // ?(" + fmt.Sprint(math.Ceil(math.Sqrt(float64(ssd_min)))) + ")") 
+			strs = append(strs, name_strs[idx_min] + " // " + fmt.Sprint(math.Ceil(math.Sqrt(float64(ssd_min))))) 
 		} else {
 			strs = append(strs, "__????__") 
 		}
@@ -758,46 +779,31 @@ func files_prn_str(strs2, strs []string) (string) {
 ///////////
 
 // add scaled normal random value, reflect as necessary until inside limits
-// flip / confine signed knobs to signed regions
-func pint_rnd_refl(pint, min, max int, mult, ms float64) (int) {
+// if (val < 0) flip signed knobs w/ 50/50 prob, else confine to signed regions
+func pint_rand_refl(pint, min, max, val int) (int) {
 	// randomly flip signed knob sign
-	if (mult != 0) && (min < 0) && (rand.Float64() < ms) { pint = -pint }
+	if (val < 0) && (min < 0) && (rand.Float64() < 0.5) { pint = -pint }
 	// confine to signed area
 	if pint < 0 { max = 0 } else { min = 0 }
-	norm := rand.NormFloat64()
-	scale := mult * float64(max - min) / 100  // mult scaled 1/100 (percent)
-	norm_offs := int(math.Round(scale * norm))
-	pint += norm_offs
+	scale := (math.Abs(float64(val)) * float64(max - min)) / 256  // val scaled 1/256
+	pint += int(math.Round(scale * rand.NormFloat64()))
 	for (pint < min) || (pint > max) {
-		if pint > max { pint -= 2 * (pint - max) }
+		if pint > max { pint += 2 * (max - pint) }
 		if pint < min { pint += 2 * (min - pint) }
 	}
 	return pint
 }
 
-// morph most oscillator settings, all filter freqs, some resonator settings
-func morph_pints(pints []int, mo, mn, me, mf, mr, ms float64) ([]int) {
-	// function to interate over relevant 
-	morph := func(m_pidx []int, mult float64) ([]int) {
-		for _, pidx := range m_pidx {
-			ptype := pre_params[pidx].ptype;
-			pints[pidx] = pint_rnd_refl(pints[pidx], ptype_min(ptype), ptype_max(ptype), mult, ms) 
+// morph pre knobs
+func morph_pints(pints, knob_idxs, vals []int) ([]int) {
+	for idx, knob_idx := range knob_idxs {
+		ptype, _, pidx, _, pgroup := pname_lookup(knob_pnames[knob_idx])
+		if pgroup == "pre" {
+			pints[pidx] = pint_rand_refl(pints[pidx], ptype_min(ptype), ptype_max(ptype), vals[idx]) 
 		}
-		return pints
 	}
-	// OSC: odd, harm, offs, xmix, fm, hmul, hmul, offs, sprd:
-	pints = morph([]int{ 1, 2, 6, 7, 8, 16, 17, 18, 19 }, mo)
-	// NOISE: puls, duty:
-	pints = morph([]int{ 29, 33 }, mn)
-	// EQ: osc & noise bass, treb:
-	pints = morph([]int{ 14, 15, 30, 32 }, me)
-	// FILT: all formant freqs, osc & noise filter freqs too:
-	pints = morph([]int{ 41, 55, 43, 57, 45, 62, 59, 64,  9, 22 }, mf)
-	// RESON: harm, freq, tap:
-	pints = morph([]int{ 35, 36, 37 }, mr)
 	return pints
 }
-
 
 ////////////
 // update //
@@ -978,7 +984,7 @@ func process_dlps(dir, dir2 string, pro, mono, update, robs, yes, dry bool) {
 	fmt.Println(prn_str)
 }
 
-
+/*
 // pump list of dlps to default slots
 func dlps_pump(path string, yes bool) {
 	type slot_dlp_t struct {
@@ -1003,6 +1009,7 @@ func dlps_pump(path string, yes bool) {
 		}
 	}
 }
+*/
 
 /////////
 // dev //

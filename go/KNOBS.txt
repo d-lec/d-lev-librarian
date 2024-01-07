@@ -20,7 +20,7 @@ knob     hex      label    range    page title
 16       10       vmod     0:11     PREVIEW
 17       11       pmod     -63:63   
 18       12       prev     -63:63     
-19       13       mode     0:11
+19       13       mode     0:12
 20       14       harm     -31:31   
 21       15       tone     -31:31   
 22       16       oct      -7:7     
@@ -37,7 +37,7 @@ knob     hex      label    range    page title
 33       21       rise     0:63     
 34       22       knee     0:31     
 35       23       fall     0:63     
-36       24       velo     -31:31     
+36       24       velo     0:31     
 37       25       damp     0:63     
 38       26       dloc     0:63     
 39       27       -        0:19     

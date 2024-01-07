@@ -67,22 +67,34 @@ func sp_rx_knobs_str() (string) {
 	return rx_str
 }	
 
-// read knobs pint data
+// read knobs, convert to pints
 func sp_rx_knobs_pints(mode string) ([]int) {
 	kints := hexs_to_ints(sp_rx_knobs_str(), 1)
-	return knob_pre_order(kints, mode)
+	return kints_pints_order(kints, mode)
 }
 
 // write knobs pint data
 func sp_tx_knobs_pints(pints []int, mode string) {
 	sp := sp_open()
-	for kidx, kname := range knob_pnames {
-		_, _, pidx, pmode := pname_lookup(kname)
-		if mode == pmode {
+	switch mode {
+	case "pre" :
+		for pidx:=0; pidx<len(pre_params); pidx++ {
+			_, _, _, kidx, _ := pname_lookup(pre_params[pidx].pname)
+			wr_str := fmt.Sprint(kidx, " ", pints[pidx], " wk ")
+			sp_tx_rx(sp, wr_str, false)
+		}
+	case "pro" :
+		for pidx:=0; pidx<len(pro_params); pidx++ {
+			_, _, _, kidx, _ := pname_lookup(pro_params[pidx].pname)
+			wr_str := fmt.Sprint(kidx, " ", pints[pidx], " wk ")
+			sp_tx_rx(sp, wr_str, false)
+		}
+	case "not" :
+		for pidx:=0; pidx<len(not_params); pidx++ {
+			_, _, _, kidx, _ := pname_lookup(not_params[pidx].pname)
 			wr_str := fmt.Sprint(kidx, " ", pints[pidx], " wk ")
 			sp_tx_rx(sp, wr_str, false)
 		}
 	}
 	sp.Close()
 }
-

@@ -11,9 +11,94 @@
 - build_all.sh : all of the above
 - build.sh     : just Linux (for my dev.)
 
+
+//////////////////
+// TODO (maybe) //
+//////////////////
+- Edit command that operates from/to DLP|PRE|PRO|EEPROM files.
+- Serial port timeout.
+
+
 ////////////////
 // CHANGE LOG //
 ////////////////
+2024-01-08 : v12 - RELEASED as 2024-01-08 -
+- Minor tinkering for release.
+
+2023-12-18 : v12
+- Reworked bank command to generate / operate on PRE|PRO files too.
+- Menu option to list, select, & pump EEPROM files in exe dir.
+- Menu option "hz" to display pitch & volume field freqs.
+- New d-lib_menu.go file.
+
+2023-12-17 : v12
+- Command knob done, removed UI page change.
+- Working on bank command.
+- Removed copy command.
+- Reworked split_eeprom_str() & split_pre_pro_str() <= removed trailing "\n" !
+- New strs_trim() and str_split_trim() functions.
+
+2023-12-16 : v12
+- Working on the knob command.
+
+2023-12-15 : v12
+- Working on the knob command.
+- Improved sp_tx_knobs_pints() (no superfluous writes).
+
+2023-12-14 : v12
+- Command morph back to using ints for morph weights.
+- Command morph rearranged.
+
+2023-12-13 : v12
+- Command morph now page:knob:val with -pkv flags.
+- Command morph -sm flag replaced with negative val giving 50% chance of sign flip.
+
+2023-12-11 : v12
+- Command view restructured a bit.
+
+2023-12-06 : v12
+- Command port removed -i info flag.
+- Command ver new -crc, -pre, -pro flags.
+
+2023-12-05 : v12
+- Command ports => port, new -l list flag, new -i info flag, -p => -s (set).
+
+2023-12-04 : v12
+- More unified formatting of command feedback.
+
+2023-12-03 : v12
+- Command copy implemented to copy UI pages from slot|DLP|PRE|PRO|EEPROM.
+
+2023-12-01 : v12
+- Command morph can now use PRE|EEPROM file as source.
+- file_slot_str() used for view & morph.
+- morph_pints() now uses page names for knobs rather than pints index.
+
+2023-11-30 : v12
+- More unified formatting of command feedback.
+- Fixed slice write bug in page_fuzzy_lookup().
+- Fixed pint_rnd_refl() so ms is independent of mult.
+
+2023-11-27 : v12
+- Command morph is now page based (multiple -pm page:morph).
+
+2023-11-26 : v12
+- Command knob flag change: -k => -pk
+
+2023-11-24 : v12
+- VOLUME:velo type 0xd1 => 0x30.
+
+2023-11-22 : v12
+- Messing with fuzzy_score() construct & weights.
+
+2023-11-19 : v12
+- Fuzzy matching for page_lookup().
+- Messing with fuzzy_score() weights.
+- Separate d-lib_string.go file.
+
+2023-11-18 : v12
+- Fuzzy matching for cmd_hint().
+
 2023-11-06 : v11 - RELEASED as 2023-11-02 -
 - Match command scores now EOL comments.
 - Bank command now strips out all C & C++ type comments.

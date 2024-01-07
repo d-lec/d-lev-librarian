@@ -8,7 +8,9 @@ package main
 import (
 	"flag"
 	"os"
-	"fmt"
+	// for fuzzy testing:
+	//"strings"
+	//"fmt"
 )
 
 func main() {
@@ -20,29 +22,28 @@ func main() {
 		// parse subcommands
 		cmd := os.Args[1]
 		switch cmd {
-			case "menu" : menu()
+			case "menu"  : menu()
 			case "help", "-help", "-h", "/h" : help()
-			case "ports" : ports()
-			case "view" : view()
+			case "port"  : port()
+			case "view"  : view()
 			case "match" : match()
-			case "diff" : diff()
-			case "bank" : bank()
-			case "dump" : dump()
-			case "pump" : pump()
+			case "diff"  : diff()
+			case "bank"  : bank()
+			case "dump"  : dump()
+			case "pump"  : pump()
 			case "split" : split()
-			case "join" : join()
+			case "join"  : join()
 			case "morph" : morph()
 			case "batch" : batch()
-			case "knob" : knob()
-			case "ver" : ver()
-			case "hcl" : hcl_cmd()
-			case "loop" :loop_cmd()
-			case "acal" : acal_cmd()
+			case "knob"  : knob()
+			case "ver"   : ver()
+			case "hcl"   : hcl_cmd()
+			case "loop"  : loop_cmd()
+			case "acal"  : acal_cmd()
 			case "reset" : reset_cmd()
 			case "stats" : stats()
-			case "dev" : dev()  // dev stuff
-			default : 
-				error_exit(fmt.Sprint("Command '", cmd, "' not found (did you mean '", cmd_hint(cmd), "' ?)"))
+//			case "dev"   : dev()  // dev stuff
+			default : cmd_hint(cmd)
 		}
 	}
 }  // end of main()
@@ -51,6 +52,16 @@ func main() {
 ////////////////////
 // main functions //
 ////////////////////
+
+// need these for custom flags
+type flag_strs_t []string
+
+func (i *flag_strs_t) String() string { return "" }
+
+func (i *flag_strs_t) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
 
 // show help
 func help() {
@@ -62,21 +73,25 @@ func help() {
 }
 
 // list free serial ports / set port
-func ports() {
+func port() {
 	sub := flag.NewFlagSet("ports", flag.ExitOnError)
-	port := sub.String("p", "", "`port` number")
+	set := sub.String("s", "", "`set` port number")
+	list := sub.Bool("l", false, "list ports")
 	sub.Parse(os.Args[2:])
 	//
-	ports_cmd(*port)
+	port_cmd(*set, *list)
 }
 
 // report active or file version
 func ver() {
 	sub := flag.NewFlagSet("ver", flag.ExitOnError)
 	file := sub.String("f", "", "source `file` name")
+	crc := sub.Bool("crc", false, "crc check")
+	pre := sub.Bool("pre", false, "preset check")
+	pro := sub.Bool("pro", false, "profile check")
 	sub.Parse(os.Args[2:])
 	//
-	ver_cmd(*file, false, false)
+	ver_cmd(*file, *crc, *pre, *pro)
 }
 
 // report stats
@@ -105,14 +120,11 @@ func view() {
 // twiddle knob
 func knob() {
 	sub := flag.NewFlagSet("knob", flag.ExitOnError)
-	knob := sub.String("k", "", "page:knob[0:6]")
-	ofs := sub.String("o", "", "knob offset `value`")
-	set := sub.String("s", "", "knob set `value`")
-	min := sub.Bool("min", false, "set knob to min")
+	pkv := sub.String("pkv", "", "page:all|knob[0:6]:val")
 	view := sub.Bool("v", false, "view all knobs")
 	sub.Parse(os.Args[2:])
 	//
-	knob_cmd(*knob, *ofs, *set, *min, *view)
+	knob_cmd(*pkv, *view)
 }
 
 // diff DLP file(s) / slot(s) / knobs
@@ -179,10 +191,11 @@ func bank() {
 	sub := flag.NewFlagSet("btos", flag.ExitOnError)
 	slot := sub.String("s", "", "starting `slot` number")
 	file := sub.String("f", "", "bank `file` name")
+	file2 := sub.String("f2", "", "target `file2` name")
 	pro := sub.Bool("pro", false, "profile mode")
 	sub.Parse(os.Args[2:])
 	//
-	bank_cmd(*slot, *file, *pro)
+	bank_cmd(*slot, *file, *file2, *pro)
 }
 
 
@@ -211,25 +224,22 @@ func join() {
 }
 
 
-///////////
-// morph //
-///////////
+//////////////////
+// morph & copy //
+//////////////////
 
+// morph knobs|slot|file to knobs
 func morph() {
+	var pkv flag_strs_t
 	sub := flag.NewFlagSet("morph", flag.ExitOnError)
 	file := sub.String("f", "", "source `file` name")
 	knobs := sub.Bool("k", false, "source knobs")
 	slot := sub.String("s", "", "source `slot` number")
 	seed := sub.Int64("i", 0, "initial seed")
-	mo := sub.Float64("mo", 0, "oscillator multiplier")
-	mn := sub.Float64("mn", 0, "noise multiplier")
-	me := sub.Float64("me", 0, "eq (bass & treble) multiplier")
-	mf := sub.Float64("mf", 0, "filter multiplier")
-	mr := sub.Float64("mr", 0, "resonator multiplier")
-	ms := sub.Float64("ms", 0, "sign change odds (0 to 1)")
+	sub.Var(&pkv, "pkv", "page:all|knob[0:6]:val")
 	sub.Parse(os.Args[2:])
 	if *seed == 0 { *seed = timeseed() }
-	morph_cmd(*file, *knobs, *slot, *seed, *mo, *mn, *me, *mf, *mr, *ms)
+	morph_cmd(*file, *knobs, *slot, *seed, pkv)
 }
 
 
@@ -267,8 +277,61 @@ func menu() {
 // dev //
 /////////
 
+/*
 func dev() {
+	var pm flag_strs_t
+	sub := flag.NewFlagSet("dev", flag.ExitOnError)
+	sub.Var(&pm, "pm", "page:morph")
+	sub.Parse(os.Args[2:])
+	//
+	dev_cmd(pm)
+}
+*/
 
+/*
+	// fuzz testing
+	sub := flag.NewFlagSet("dev", flag.ExitOnError)
+	pattern := sub.String("p", "", "pattern string")
+	file := sub.String("f", "", "source `file` name")
+	sub.Parse(os.Args[2:])
+	//
+	file_str := file_read_str(*file)
+	str_split := strings.Split(strings.TrimSpace(file_str), "\n")
+	list := fuzzy_list(*pattern, str_split, 30, true)
+	for _, word := range list { fmt.Println(word) }
+*/
+
+
+/*
+	// fuzz testing
+	sub := flag.NewFlagSet("dev", flag.ExitOnError)
+	pattern := sub.String("p", "", "pattern string")
+	sub.Parse(os.Args[2:])
+	//
+	fmt.Println(fuzzy_top(*pattern, lib_cmds))
+*/
+
+
+/*
+	// fuzz testing
+	sub := flag.NewFlagSet("dev", flag.ExitOnError)
+	pattern := sub.String("p", "", "pattern string")
+	file := sub.String("f", "", "source `file` name")
+	sub.Parse(os.Args[2:])
+	//
+	fuzzy_test(*pattern, *file)
+*/
+/*
+	// fuzz testing
+	sub := flag.NewFlagSet("dev", flag.ExitOnError)
+	pattern := sub.String("p", "", "pattern string")
+	entry := sub.String("e", "", "entry string")
+	sub.Parse(os.Args[2:])
+	//
+	fmt.Println(fuzzy_score(*pattern, *entry))
+*/
+
+/*
 	// check comment removal from file
 	sub := flag.NewFlagSet("dev", flag.ExitOnError)
 	file := sub.String("f", "", "source `file` name")
@@ -276,7 +339,7 @@ func dev() {
 	//
 	str := file_read_str(*file)
 	fmt.Println(strip_cmnt(str))
-
+*/
 
 /*
 	// find DLP files with certain characteristics
@@ -295,4 +358,3 @@ func dev() {
 	fmt.Print("_", *str, "_\n")
 */
 
-}

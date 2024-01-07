@@ -84,18 +84,21 @@ func file_write_str(file, data string, yes bool) (bool) {
 }
 
 // get name and contents of all *<ext> files in <dir>
-func dir_read_strs(dir, ext string) ([]string, []string) {
-	var name_strs []string
-	var data_strs []string
+// optionally trim file extensions
+func dir_read_strs(dir, ext string, trim bool) (name_strs, data_strs []string) {
 	files, err := os.ReadDir(dir); err_chk(err)
 	for _, file := range files {
 		if (filepath.Ext(file.Name()) == ext) && (file.IsDir() == false) {
 			file_str := file_read_str(filepath.Join(dir, file.Name()))
-			name_strs = append(name_strs, strings.TrimSuffix(file.Name(), ext))
 			data_strs = append(data_strs, file_str)
+			if trim { 
+				name_strs = append(name_strs, strings.TrimSuffix(file.Name(), ext))
+			} else {
+				name_strs = append(name_strs, file.Name())
+			}
 		}
     }
-    return name_strs, data_strs
+    return
 }
 
 
