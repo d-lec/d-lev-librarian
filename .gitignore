@@ -31,3 +31,5 @@ d-lib
 d-a32
 d-arm
 d-lib.cfg
+_WORK_/
+*.eeprom
